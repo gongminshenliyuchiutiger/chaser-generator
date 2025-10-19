@@ -1,0 +1,2951 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>精彩神捕捉遊戲配置生成器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome CDN -->
+    <!-- 已移除 integrity 和 crossorigin 屬性以解決載入問題 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+    <!-- JSZip for creating ZIP files -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <!-- FileSaver.js for saving the generated ZIP -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #FFF2F2; /* Very light pink */
+            color: #333333; /* Dark gray for readability */
+            padding: 2rem;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background-color: #FFFFFF; /* Pure white container */
+            border-radius: 0.75rem;
+            box-shadow: 0 8px 24px rgba(255, 100, 50, 0.15); /* Soft orange-pink shadow */
+            padding: 2rem;
+            border: 1px solid #FFDAB9; /* PeachPuff border */
+        }
+        h1, h2, h3 {
+            color: #FF6B00; /* Bright orange accent for headings */
+            font-weight: 700;
+        }
+        .section-separator {
+            border-top: 1px solid #FFDAB9; /* Matching border color */
+            margin-top: 2rem;
+            padding-top: 2rem;
+        }
+        .btn-primary {
+            background-color: #FF6B00; /* Bright orange */
+            color: white;
+            padding: 0.6rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            transition: background-color 0.2s, color 0.2s;
+        }
+        .btn-primary:hover {
+            background-color: #FF8C00; /* Darker orange */
+        }
+        .btn-secondary {
+            background-color: #FFA500; /* Orange */
+            color: white;
+            padding: 0.6rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            transition: background-color 0.2s;
+        }
+        .btn-secondary:hover {
+            background-color: #FFB347; /* Lighter orange */
+        }
+        .btn-danger {
+            background-color: #E63946; /* Strong red */
+            color: white;
+            padding: 0.4rem 1rem;
+            border-radius: 0.375rem;
+            font-weight: 600;
+            transition: background-color 0.2s;
+        }
+        .btn-danger:hover {
+            background-color: #D62839; /* Darker red */
+        }
+        .input-field {
+            border: 1px solid #FFDAB9; /* Matching border */
+            border-radius: 0.375rem;
+            padding: 0.5rem 0.75rem;
+            width: 100%;
+            background-color: #FFFFFF; /* White background for input */
+            color: #333333; /* Dark text for input */
+        }
+        .image-preview {
+            width: 60px;
+            height: 60px;
+            object-fit: contain;
+            border: 1px solid #FFDAB9;
+            border-radius: 0.25rem;
+            background-color: #FFF8F8; /* Light pinkish-white background */
+        }
+        .card {
+            background-color: #FFF8F8; /* Very light pinkish-white card background */
+            border: 1px solid #FFDAB9;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        .drag-handle {
+            cursor: grab;
+            margin-right: 0.5rem;
+            color: #FFB347; /* Light orange */
+        }
+        .drag-handle:active {
+            cursor: grabbing;
+        }
+        .select-item {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem;
+            border-bottom: 1px solid #FFDAB9;
+            cursor: pointer;
+            background-color: #FFFFFF; /* White for select item */
+        }
+        .select-item:hover {
+            background-color: #FFE0B2; /* Light peach on hover */
+        }
+        .select-item:last-child {
+            border-bottom: none;
+        }
+        .select-item img {
+            width: 30px;
+            height: 30px;
+            margin-right: 0.5rem;
+            object-fit: contain;
+        }
+        .select-item-name {
+            font-weight: 500;
+            color: #333333;
+            flex-grow: 1;
+        }
+        .object-config-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1rem;
+        }
+        /* Loader styles from storybook generator */
+        #loader { display: none; position: fixed; inset: 0; background-color: rgba(255, 242, 242, 0.85); z-index: 9999; color: #FF6B00; font-size: 1.5rem; }
+        #loader-text { margin-top: 1rem; }
+        .spinner { border: 8px solid #FFDAB9; border-top: 8px solid #FF6B00; border-radius: 50%; width: 60px; height: 60px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Mascot Styles for Generator */
+        #mascot-generator {
+            position: fixed;
+            bottom: 15px;
+            left: 15px;
+            width: 100px;
+            height: auto;
+            z-index: 50;
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+            cursor: pointer;
+            transition: transform 0.2s ease-out, filter 0.2s ease-out;
+        }
+        #mascot-generator:hover {
+            transform: scale(1.05);
+            filter: drop-shadow(0 6px 12px rgba(0,0,0,0.4)) brightness(1.1);
+        }
+        #mascot-generator.shake {
+            animation: shake-gen 0.5s ease-in-out;
+        }
+        @keyframes shake-gen {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        .particle {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            pointer-events: none;
+            animation: particle-fly 1s ease-out forwards;
+            z-index: 51; /* Above mascot */
+        }
+        @keyframes particle-fly {
+            0% { transform: translate(0, 0) scale(1); opacity: 1; }
+            100% { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; }
+        }
+
+        /* Theme buttons for generator */
+        .theme-button {
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            font-weight: 500;
+            border: 1px solid #FFDAB9;
+            background-color: #FFFFFF;
+            color: #FF6B00;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .theme-button:hover {
+            background-color: #FFE0B2; /* Light peach */
+            border-color: #FFA500; /* Orange */
+            color: #FF6B00;
+        }
+        .theme-button.active {
+            background-color: #FF6B00; /* Bright orange */
+            border-color: #FF8C00; /* Darker orange */
+            color: white;
+            box-shadow: 0 2px 5px rgba(255, 107, 0, 0.4);
+            font-weight: 600;
+        }
+
+        /* Toast notification for mascot */
+        #toast-notification {
+            position: fixed;
+            top: 1rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #333;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+            z-index: 10000;
+            pointer-events: none; /* Allow clicks to pass through */
+        }
+        #toast-notification.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div id="loader" class="flex flex-col justify-center items-center"><div class="spinner"></div><p id="loader-text">正在處理中，請稍候...</p></div>
+
+    <div id="toast-notification" class="hidden"></div>
+
+    <div class="container">
+        <h1 class="text-4xl text-center mb-8">精彩神捕捉遊戲配置生成器</h1>
+
+        <!-- 0. 網站與遊戲基本資訊設定 -->
+        <div class="mb-8 p-6 bg-purple-50 rounded-lg shadow-sm">
+            <h2 class="text-2xl mb-4"><i class="fas fa-globe"></i> 網站與遊戲資訊</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label for="browserTitleInput" class="block text-sm font-medium text-gray-700">瀏覽器分頁標題 (&lt;title&gt;)</label>
+                    <input type="text" id="browserTitleInput" class="input-field mt-1" value="精彩神捕捉遊戲系統">
+                </div>
+                <div>
+                    <label for="gameTitleInput" class="block text-sm font-medium text-gray-700">遊戲主標題 (&lt;h1&gt;)</label>
+                    <input type="text" id="gameTitleInput" class="input-field mt-1" value="精彩神捕捉遊戲系統">
+                </div>
+            </div>
+            <div class="mb-4">
+                <label for="copyrightTextInput" class="block text-sm font-medium text-gray-700">版權文字</label>
+                <input type="text" id="copyrightTextInput" class="input-field mt-1" value="Copyright © Liyuchiutiger Gongminshen">
+            </div>
+        </div>
+
+        <!-- 1. 遊戲基礎設定 -->
+        <div class="mb-8 p-6 bg-blue-50 rounded-lg shadow-sm">
+            <h2 class="text-2xl mb-4"><i class="fas fa-cog"></i> 遊戲基礎設定</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label for="scorePerCapture" class="block text-sm font-medium text-gray-700">每次成功捕捉基礎分數</label>
+                    <input type="number" id="scorePerCapture" class="input-field mt-1" value="100">
+                </div>
+                <div>
+                    <label for="bonusItemScore" class="block text-sm font-medium text-gray-700">獎勵物品額外分數</label>
+                    <input type="number" id="bonusItemScore" class="input-field mt-1" value="200">
+                </div>
+            </div>
+            <div>
+                <label for="scaleFactor" class="block text-sm font-medium text-gray-700">圖片顯示縮放倍數 (遊戲中實際大小 = 預設大小 * 此值)</label>
+                <input type="number" id="scaleFactor" class="input-field mt-1" value="2" step="0.1">
+            </div>
+        </div>
+
+        <!-- 遊戲配色風格設定 -->
+        <div class="mb-8 p-6 bg-yellow-50 rounded-lg shadow-sm">
+            <h2 class="text-2xl mb-4"><i class="fas fa-palette"></i> 遊戲配色風格</h2>
+            <div id="theme-selection-buttons" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                <!-- Theme buttons will be rendered here by JavaScript -->
+            </div>
+        </div>
+
+        <!-- 2. 物品設定區 -->
+        <div class="section-separator p-6 bg-gray-50 rounded-lg shadow-sm">
+            <h2 class="text-2xl mb-4 flex justify-between items-center">
+                <i class="fas fa-box-open"></i> 物品設定
+                <button id="add-object-btn" class="btn-primary"><i class="fas fa-plus-circle"></i> 新增物品</button>
+            </h2>
+            <div id="object-config-list" class="object-config-grid">
+                <!-- 物品配置將會動態載入這裡 -->
+            </div>
+        </div>
+
+        <!-- 3. 關卡設定區 -->
+        <div class="section-separator p-6 bg-green-50 rounded-lg shadow-sm">
+            <h2 class="text-2xl mb-4 flex justify-between items-center">
+                <i class="fas fa-sitemap"></i> 關卡設定
+                <button id="add-level-btn" class="btn-primary"><i class="fas fa-plus-circle"></i> 新增關卡</button>
+            </h2>
+            <div id="level-config-list">
+                <!-- 關卡配置將會動態載入這裡 -->
+            </div>
+        </div>
+
+        <!-- 4. 生成配置區 -->
+        <div class="section-separator text-center p-6 bg-indigo-50 rounded-lg shadow-sm">
+            <h2 class="text-2xl mb-4"><i class="fas fa-code"></i> 生成與下載</h2>
+            <div class="flex flex-col md:flex-row gap-4 justify-center mb-4">
+                <button id="generate-config-btn" class="btn-primary"><i class="fas fa-sync-alt"></i> 生成配置並準備下載</button>
+                <button id="download-zip-btn" class="btn-secondary" disabled><i class="fas fa-file-archive"></i> 下載遊戲 ZIP 包</button>
+            </div>
+
+            <div class="mt-8 text-left p-4 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800">
+                <h3 class="font-bold text-lg mb-2">💡 如何使用生成的 ZIP 包？</h3>
+                <p class="mb-2">1. 點擊「下載遊戲 ZIP 包」按鈕，將會下載一個壓縮檔。</p>
+                <p class="mb-2">2. 解壓縮此檔案，您會得到一個 `index.html`、一個 `item/` 資料夾。</p>
+                <p class="mb-2">3. 將這些檔案和資料夾保持相對路徑放置。</p>
+                <p class="mb-2">4. 使用任何現代瀏覽器打開 `index.html` 即可開始遊戲！</p>
+                <p class="text-sm mt-3 font-bold text-red-700">
+                    <i class="fas fa-exclamation-triangle"></i> 重要提示：
+                    <br>如果您在 `file://` 協定（直接從硬碟打開 HTML 檔案）下運行此生成器，
+                    <br>預設物品的圖片預覽可能因瀏覽器安全限制而無法顯示。
+                    <br>為確保預覽正常，請將 `generator.html` 放置在一個具有 `item/` 資料夾（內含預設 SVG 圖片）的根目錄下，或者使用本地網路伺服器運行本頁面。例如：
+                    <br> &nbsp; - 安裝 VS Code 的 "Live Server" 擴充功能，<br> &nbsp; &nbsp; &nbsp; 然後對 `generator.html` "Open with Live Server"。
+                    <br> &nbsp; - 在終端機中，切換到此檔案目錄，執行 `python -m http.server`，<br> &nbsp; &nbsp; &nbsp; 然後瀏覽 `http://localhost:8000/generator.html`。
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 吉祥物圖片 (生成器頁面左下角固定) -->
+    <div id="mascot-generator">
+        <img src="image/LiyuChillGuy.svg" alt="吉祥物" class="w-full h-full" onerror="this.style.display='none'; console.error('Mascot image not found at image/LiyuChillGuy.svg in generator')">
+    </div>
+
+    <!-- 隱藏的 textarea，用於存儲 index.html 模板內容 -->
+    <!-- 這解決了在 file:// 協議下無法 fetch 本地文件的問題 -->
+    <textarea id="indexTemplateContent" style="display:none;">
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><!-- INSERT_BROWSER_TITLE_HERE --></title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        
+        /* Theme CSS Variables will be inserted here */
+        <!-- INSERT_THEME_CSS_VARIABLES_HERE -->
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--body-bg);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 1rem;
+            color: var(--body-text-color);
+            transition: background-color 0.5s;
+            position: relative; 
+            overflow-x: hidden; /* Prevent horizontal scroll due to particle effects */
+        }
+
+        #game-wrapper {
+            background-color: var(--wrapper-bg); 
+            backdrop-filter: blur(10px); /* 磨砂玻璃效果 */
+            -webkit-backdrop-filter: blur(10px); /* 兼容 Safari */
+            border-radius: 1.5rem;
+            box-shadow: var(--wrapper-shadow);
+            width: 95vw;
+            max-width: 700px; /* 限制最大寬度，響應式設計 */
+            padding: 1.5rem;
+            z-index: 10; 
+            border: var(--wrapper-border);
+            color: var(--wrapper-text-color);
+            display: none; /* 初始隱藏，載入完成後顯示 */
+        }
+
+        #game-wrapper h1 {
+            color: var(--wrapper-h1-color);
+        }
+
+        #canvas-container {
+            position: relative;
+            background: var(--canvas-bg);
+            border-radius: 1rem;
+            border: var(--canvas-border); 
+            overflow: hidden;
+            touch-action: none; /* 禁用瀏覽器觸控行為 */
+            min-height: 400px; /* 確保容器有高度，避免閃爍 */
+            box-shadow: var(--canvas-shadow);
+        }
+        
+        #gameCanvas {
+            display: block;
+            width: 100%;
+            height: 400px;
+            cursor: pointer;
+        }
+
+        .status-bar-item {
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-weight: bold;
+            color: var(--body-text-color); /* Use body text color for consistency */
+            background-color: var(--status-item-bg);
+            border: var(--status-item-border);
+        }
+        /* 特殊狀態欄顏色 */
+        .status-bar-item#level-display-wrapper { background-color: var(--status-level-bg); border-color: var(--status-level-border); }
+        .status-bar-item#level-display-wrapper span:first-child { color: var(--status-level-text); }
+        .status-bar-item#timer-display-wrapper { background-color: var(--status-timer-bg); border-color: var(--status-timer-border); }
+        .status-bar-item#timer-display-wrapper span:first-child { color: var(--status-timer-text); }
+        .status-bar-item#score-display-wrapper { background-color: var(--status-score-bg); border-color: var(--status-score-border); }
+        .status-bar-item#score-display-wrapper span:first-child { color: var(--status-score-text); }
+
+
+        .game-button {
+            padding: 0.6rem 2rem;
+            background: var(--button-bg);
+            color: var(--button-color);
+            font-weight: 900;
+            font-size: 1.1rem;
+            border-radius: 9999px;
+            border: none;
+            cursor: pointer;
+            box-shadow: var(--button-shadow);
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+
+        .game-button:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--button-hover-shadow);
+        }
+
+        /* 吉祥物樣式 (頁面左下角固定) */
+        #mascot-fixed {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            width: 80px; 
+            height: auto;
+            cursor: pointer;
+            z-index: 5; 
+            transition: transform 0.2s ease-out, filter 0.2s ease-out; 
+        }
+
+        /* 抖動動畫 */
+        @keyframes neon-shake {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            10% { transform: translate(-1px, -1px) rotate(-1deg); }
+            20% { transform: translate(1px, 1px) rotate(1deg); }
+            30% { transform: translate(-1px, 1px) rotate(-1deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, -1px) rotate(-1deg); }
+            60% { transform: translate(1px, 1px) rotate(1deg); }
+            70% { transform: translate(-1px, 1px) rotate(-1deg); }
+            80% { transform: translate(1px, -1px) rotate(1deg); }
+            90% { transform: translate(-1px, -1px) rotate(-1deg); }
+        }
+
+        #mascot-fixed:hover {
+            animation: neon-shake 0.8s infinite linear; 
+            filter: drop-shadow(0 0 5px var(--mascot-hover-shadow-color1)) 
+                    drop-shadow(0 0 10px var(--mascot-hover-shadow-color2)) 
+                    drop-shadow(0 0 15px var(--mascot-hover-shadow-color3)) 
+                    drop-shadow(0 0 20px var(--mascot-hover-shadow-color4)); 
+        }
+
+        /* 版權資訊樣式 */
+        #copyright {
+            margin-top: 2rem;
+            font-size: 0.9rem;
+            color: var(--copyright-text-color);
+            text-align: center;
+            z-index: 10;
+        }
+
+        /* 遊戲說明書樣式 */
+        #instructions-modal {
+            background-color: rgba(0, 0, 0, 0.85); /* 更深的半透明背景 */
+            z-index: 50;
+        }
+        #instructions-modal .modal-content { /* 自定義 class 避免 Tailwind 衝突 */
+            background-color: var(--modal-bg);
+            max-height: 90vh;
+            overflow-y: auto;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: var(--modal-border);
+            box-shadow: var(--modal-shadow);
+        }
+        #instructions-modal h2 {
+            color: var(--modal-h2-color);
+        }
+        #instructions-modal h3 {
+            color: var(--modal-h3-color);
+        }
+        #instructions-modal button.absolute {
+            color: var(--modal-close-color);
+        }
+        #instructions-modal button.absolute:hover {
+            color: var(--modal-hover-close-color);
+        }
+
+        /* 遊戲按鈕覆蓋層 */
+        #game-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+            z-index: 20;
+            background: rgba(30,30,50,0.6); /* 輕微背景，讓文字更清晰 */
+            border-radius: 1rem;
+            transition: opacity 0.3s ease-in-out;
+            opacity: 1;
+        }
+
+        #game-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+            display: none;
+        }
+        #game-overlay:not(.hidden) {
+            display: flex;
+        }
+
+        #game-overlay > * {
+            pointer-events: auto;
+        }
+
+        /* 主標題內的說明按鈕 */
+        #title-instructions-button {
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            padding: 0;
+            cursor: pointer;
+            color: var(--title-instructions-button-color);
+            transition: color 0.2s;
+        }
+        #title-instructions-button:hover {
+            color: var(--title-instructions-button-hover-color);
+        }
+        @media (min-width: 640px) {
+            #title-instructions-button {
+                right: 1rem;
+            }
+        }
+
+        /* 物品小圖標在文字中的樣式 */
+        .item-icon-inline {
+            height: 1.5em;
+            width: auto;
+            vertical-align: middle;
+            margin: 0 0.2em;
+            display: inline-block;
+        }
+        /* 確保每個任務項目的圖片和文字不會斷開 */
+        .mission-item-wrapper {
+            display: inline-flex;
+            align-items: center;
+            white-space: nowrap;
+            margin-right: 1rem;
+        }
+        /* 任務目標區的文字 flex 容器 */
+        #mission-display .flex-wrap {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0;
+        }
+
+        #mission-display {
+            background-color: var(--mission-bg);
+            border-left: var(--mission-border);
+            color: var(--mission-text-color);
+        }
+        #mission-display h2 {
+            color: var(--mission-h2-color);
+        }
+        #mission-display .fa-camera-retro {
+            color: var(--mission-target-icon-color);
+        }
+        #mission-display #targets {
+            color: var(--mission-target-text-color);
+        }
+        #mission-display .fa-ban {
+            color: var(--mission-forbidden-icon-color);
+        }
+        #mission-display #forbidden {
+            color: var(--mission-forbidden-text-color);
+        }
+        #mission-display #level-name {
+            color: var(--mission-level-name-color);
+        }
+
+        /* Background Music Control Area - REMOVED */
+
+        /* Loading Overlay */
+        #loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--loading-overlay-bg);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--loading-overlay-text-color);
+            font-size: 1.5rem;
+            font-weight: bold;
+            z-index: 100;
+            transition: opacity 0.5s ease;
+        }
+        #loading-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        .spinner {
+            border: 4px solid var(--spinner-border-color-light);
+            border-top: 4px solid var(--spinner-border-color-dark);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 1rem;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Score breakdown style */
+        #score-breakdown {
+            margin-top: 1rem;
+            background-color: var(--score-breakdown-bg);
+            padding: 1rem;
+            border-radius: 0.75rem;
+            border: var(--score-breakdown-border);
+            font-size: 1rem;
+            color: var(--score-breakdown-text-color);
+            text-align: left;
+            width: 80%;
+            max-width: 300px;
+        }
+        #score-breakdown p {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.3rem;
+        }
+        #score-breakdown p span:first-child {
+            color: var(--score-breakdown-label-color);
+        }
+        #score-breakdown .total-score {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--score-breakdown-total-color);
+            border-top: 1px dashed var(--score-breakdown-divider-color);
+            padding-top: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+    </style>
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div id="loading-overlay">
+        <div class="spinner"></div>
+        <p>載入中，請稍候...</p>
+    </div>
+
+    <div id="game-wrapper">
+        <h1 class="text-3xl font-extrabold mb-4 text-center relative">
+            <!-- INSERT_GAME_TITLE_HERE --> 
+            <button id="title-instructions-button">
+                <i class="fas fa-info-circle text-2xl"></i>
+            </button>
+        </h1>
+        
+        <!-- 狀態欄：關卡、時間、分數 -->
+        <div class="flex justify-between items-center mb-4 p-2 rounded-xl">
+            <div id="level-display-wrapper" class="status-bar-item"><span class="">關卡:</span> <span id="level-display">0</span></div>
+            <div id="timer-display-wrapper" class="status-bar-item text-2xl"><span class="">時間:</span> <span id="timer-display">0.0</span>s</div>
+            <div id="score-display-wrapper" class="status-bar-item"><span class="">得分:</span> <span id="score-display">0</span></div>
+        </div>
+
+        <!-- 任務目標區 -->
+        <div id="mission-display" class="mb-4 p-4 rounded-lg">
+            <h2 class="text-xl font-bold mb-2"><i class="fas fa-bullseye"></i> 任務目標:</h2>
+            <div class="flex flex-wrap text-lg">
+                <p><i class="fas fa-camera-retro"></i> 捕捉: <span id="targets" class="font-bold">...</span></p>
+                <p class="ml-4"><i class="fas fa-ban"></i> 避開: <span id="forbidden" class="font-bold">...</span></p>
+            </div>
+            <p id="level-name" class="text-sm mt-2 italic">遊戲尚未開始</p>
+        </div>
+
+        <!-- 畫布容器 -->
+        <div id="canvas-container">
+            <canvas id="gameCanvas"></canvas>
+            <!-- 遊戲訊息與按鈕覆蓋層 -->
+            <div id="game-overlay">
+                <p id="game-message" class="text-lg text-white mb-4 text-center drop-shadow-lg"></p>
+                <!-- Score breakdown will be inserted here dynamically -->
+                <div id="score-breakdown" class="hidden"></div> 
+                <button id="start-button" class="game-button"></button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 背景音樂控制區 - REMOVED -->
+
+    <!-- 吉祥物圖片 (頁面左下角固定) -->
+    <img id="mascot-fixed" src="image/LiyuChillGuy.svg" alt="吉祥物 LiyuChillGuy" onerror="this.style.display='none';">
+
+    <!-- 版權資訊 -->
+    <div id="copyright">
+        <p><!-- INSERT_GENERATED_COPYRIGHT_HTML_HERE --></p>
+    </div>
+
+    <!-- 遊戲說明書 Modal -->
+    <div id="instructions-modal" class="fixed inset-0 flex items-center justify-center p-4 hidden z-50">
+        <div class="modal-content rounded-lg p-6 max-w-lg w-full text-white shadow-xl relative">
+            <h2 class="text-2xl font-bold mb-4"><i class="fas fa-gamepad"></i> 遊戲說明</h2>
+            <button class="absolute top-3 right-3 text-3xl font-bold" onclick="gameInstance.toggleInstructions()">&times;</button>
+            
+            <p class="mb-3">歡迎來到捕捉挑戰！你的任務是在限時內，捕捉到關卡指定的所有「目標」，同時「避開」所有禁忌物品。</p>
+            
+            <h3 class="text-xl font-bold mt-4 mb-2"><i class="fas fa-crosshairs"></i> 如何遊玩:</h3>
+            <ul class="list-disc list-inside mb-3 space-y-1">
+                <li>遊戲區域內會漂浮著各種物品。</li>
+                <li>點擊畫面任何位置，即會觸發一次「全螢幕快照」。</li>
+                <li><strong class="text-red-400">如果快照中出現任何禁忌物品，你將立即失敗！</strong></li>
+                <li id="instructions-forbidden-list" class="flex flex-wrap pl-5 mb-2">
+                    <!-- Dynamic forbidden items will be inserted here. Note: global forbidden items are removed. -->
+                    請在關卡設定中查看具體禁忌物品。
+                </li>
+                <li>如果快照中同時出現所有「任務目標」，且沒有任何禁忌物品，你將成功晉級！</li>
+                <li>捕捉獎勵物品可獲得額外獎勵分數，但僅限在成功晉級的回合！</li>
+                <li>點擊「下一關」或「再試一次」才會讓物件重新移動。如果快照沒有導致晉級或失敗，會出現「繼續捕捉」按鈕，點擊後物件也會恢復移動。</li>
+            </ul>
+
+            <h3 class="text-xl font-bold mt-4 mb-2"><i class="fas fa-star"></i> 遊戲提示:</h3>
+            <ul class="list-disc list-inside space-y-1">
+                <li>每個關卡的時間和目標都不同，請仔細查看。</li>
+                <li>遊戲會隨著關卡推進而增加難度，物品移動速度會變快！</li>
+                <li>精準判斷快照時機是獲勝的關鍵！</li>
+            </ul>
+            <button class="game-button mt-6 w-full" onclick="gameInstance.toggleInstructions()">我知道了！</button>
+        </div>
+    </div>
+
+    <!-- 背景音樂 Audio Element - REMOVED -->
+
+    <script>
+        // --- 遊戲全局配置 ---
+        /* <!-- INSERT_SCALE_FACTOR_HERE --> */
+        /* <!-- INSERT_SCORE_PER_CAPTURE_HERE --> */
+        /* <!-- INSERT_BONUS_ITEM_SCORE_HERE --> */
+        const TIME_BONUS_MULTIPLIER = 50; // 每秒剩餘時間的分數
+        const TARGET_BONUS_PER_ITEM = 50; // 每捕捉一個目標的額外分數 (如果有多個目標)
+
+        /* <!-- INSERT_OBJECT_DEFINITIONS_HERE --> */
+        const OBJECT_TYPES = {}; 
+
+        /* <!-- GLOBAL_FORBIDDEN_ITEMS_REMOVED --> */
+
+        /* <!-- INSERT_LEVELS_HERE --> */
+
+        // Helper to get CSS variable value
+        function getCssVariable(variableName) {
+            const value = getComputedStyle(document.documentElement).getPropertyValue(variableName).trim();
+            if (!value) {
+                console.warn(`CSS variable ${variableName} not found or empty.`);
+                return 'transparent'; // Fallback to transparent or a default color
+            }
+            return value;
+        }
+
+        // --- 遊戲對象類別 ---
+        class GameObject {
+            constructor(typeId, canvasWidth, canvasHeight) { // 傳入畫布尺寸
+                const typeDef = OBJECT_TYPES[typeId]; 
+                this.typeId = typeId;
+                this.img = typeDef.img; 
+                this.size = typeDef.size; 
+                // 讓物件從畫布邊緣外出現
+                this.x = Math.random() * canvasWidth;
+                this.y = Math.random() < 0.5 ? -this.size : canvasHeight + this.size; 
+                this.baseSpeed = typeDef.speed;
+                this.vx = (Math.random() - 0.5) * 0.5; // 隨機水平速度
+                this.vy = this.y < canvasHeight / 2 ? 1 : -1; // 根據出現位置決定初始垂直方向
+                this.isBonus = typeDef.isBonus || false; 
+                this.name = typeDef.name; 
+                this.canvasWidth = canvasWidth;
+                this.canvasHeight = canvasHeight;
+            }
+
+            isVisibleOnCanvas() {
+                // 判斷物件是否至少部分在畫布內
+                return (
+                    this.x + this.size / 2 > 0 && 
+                    this.x - this.size / 2 < this.canvasWidth && 
+                    this.y + this.size / 2 > 0 && 
+                    this.y - this.size / 2 < this.canvasHeight
+                );
+            }
+
+            update(speedMultiplier) {
+                if (gameInstance.objectsAreFrozen) return; 
+
+                this.x += this.vx * this.baseSpeed * speedMultiplier;
+                this.y += this.vy * this.baseSpeed * speedMultiplier;
+
+                // 邊界反彈
+                if (this.x - this.size / 2 < 0 || this.x + this.size / 2 > this.canvasWidth) {
+                    this.vx *= -1;
+                    // Prevent sticking to edges
+                    if (this.x - this.size / 2 < 0) this.x = this.size / 2;
+                    if (this.x + this.size / 2 > this.canvasWidth) this.x = this.canvasWidth - this.size / 2;
+                }
+            }
+
+            isOffScreen() {
+                // 判斷物件是否完全離開畫面
+                return (this.y < -this.size * 2 || this.y > this.canvasHeight + this.size * 2);
+            }
+
+            draw() {
+                // 只有當圖片載入成功時才繪製
+                if (!this.img) {
+                    gameInstance.ctx.fillStyle = 'gray';
+                    gameInstance.ctx.fillRect(this.x - this.size / 2, this.y - this.size / 2, this.size, this.size);
+                    gameInstance.ctx.fillStyle = 'white';
+                    gameInstance.ctx.font = `${this.size/3}px Arial`;
+                    gameInstance.ctx.fillText(this.name, this.x, this.y);
+                    return;
+                }
+
+                gameInstance.ctx.save();
+                gameInstance.ctx.textAlign = 'center';
+                gameInstance.ctx.textBaseline = 'middle';
+                gameInstance.ctx.globalAlpha = 1.0; 
+                
+                gameInstance.ctx.drawImage(this.img, this.x - this.size / 2, this.y - this.size / 2, this.size, this.size);
+                
+                gameInstance.ctx.restore();
+            }
+        }
+
+        // --- Game Class ---
+        class Game {
+            constructor() {
+                // DOM Elements
+                this.loadingOverlay = document.getElementById('loading-overlay');
+                this.gameWrapper = document.getElementById('game-wrapper');
+                this.canvas = document.getElementById('gameCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.timerDisplay = document.getElementById('timer-display');
+                this.levelDisplay = document.getElementById('level-display');
+                this.scoreDisplay = document.getElementById('score-display');
+                this.targetsDisplay = document.getElementById('targets');
+                this.forbiddenDisplay = document.getElementById('forbidden');
+                this.levelNameDisplay = document.getElementById('level-name');
+                this.gameMessage = document.getElementById('game-message');
+                this.startButton = document.getElementById('start-button');
+                this.gameOverlay = document.getElementById('game-overlay');
+                this.instructionsModal = document.getElementById('instructions-modal');
+                this.titleInstructionsButton = document.getElementById('title-instructions-button');
+                this.instructionsForbiddenList = document.getElementById('instructions-forbidden-list'); // This element will just show a note
+                this.scoreBreakdownElement = document.getElementById('score-breakdown'); // New element
+
+                // Audio Elements - BGM removed
+                this.audioContext = new (window.AudioContext || window.webkitAudioContext)(); // Still needed for capture/bonus sound effects
+                
+                // Game State Variables
+                this.canvasWidth = 0;
+                this.canvasHeight = 400; // 固定高度
+                this.gameState = 'ready'; // 'ready', 'playing', 'win', 'lose'
+                this.gameObjects = [];
+                this.score = 0; // Total accumulated score
+                this.currentLevelScore = 0; // Score for the current level
+                this.currentLevelIndex = 0;
+                this.captureEffect = null;
+                this.highlightEffect = null; // { type: 'success' | 'failure' | 'neutral', items: [{ obj: GameObject, color: string }], startTime: number }
+                this.bonusMessages = [];
+                this.objectsAreFrozen = false;
+                this.animationFrameId = null;
+
+                // Time Management for rAF
+                this.gameStartTime = 0;
+                this.lastFrameTime = 0;
+                this.timeLeft = 0;
+
+                // Asset Loading
+                this.totalImagesToLoad = Object.keys(ORIGINAL_IMAGE_DEFINITIONS).length;
+                this.imagesLoadedCount = 0;
+                this.imagesLoadedMap = {}; // Use a map to store loaded Image objects
+                this.fontAwesomeLoaded = false;
+                this.mascotLoaded = false;
+            }
+
+            // --- Initialization and Asset Loading ---
+            async init() {
+                this.setupEventListeners();
+                // this.resizeCanvas(); // Initial resize - will be called after gameWrapper is displayed
+                window.addEventListener('resize', () => this.resizeCanvas());
+
+                // Load Font Awesome
+                document.fonts.ready.then(() => {
+                    this.fontAwesomeLoaded = true;
+                    this.checkAllAssetsLoaded();
+                }).catch(err => {
+                    console.error("Font Awesome 字體載入失敗:", err);
+                    this.fontAwesomeLoaded = true; // Assume loaded to avoid blocking
+                    this.checkAllAssetsLoaded();
+                });
+
+                // Load Mascot Image (just check existence)
+                const mascotImg = document.getElementById('mascot-fixed');
+                // No need to create new Image if it's already in DOM, just check its `complete` status
+                if (mascotImg && mascotImg.complete) { // Check if mascotImg exists
+                    this.mascotLoaded = true;
+                    this.checkAllAssetsLoaded();
+                } else if (mascotImg) {
+                    mascotImg.onload = () => {
+                        this.mascotLoaded = true;
+                        this.checkAllAssetsLoaded();
+                    };
+                    mascotImg.onerror = () => {
+                        console.warn("吉祥物圖片載入失敗.");
+                        this.mascotLoaded = true; // Still mark as loaded to not block game
+                        this.checkAllAssetsLoaded();
+                    };
+                } else { // Mascot image element not found
+                    this.mascotLoaded = true; // Mark as loaded to not block
+                    this.checkAllAssetsLoaded();
+                }
+
+
+                // Pre-populate OBJECT_TYPES with definitions and miniHtmlImg
+                for (const key in ORIGINAL_IMAGE_DEFINITIONS) {
+                    OBJECT_TYPES[key] = { 
+                        ...ORIGINAL_IMAGE_DEFINITIONS[key], 
+                        miniHtmlImg: `<img src="${ORIGINAL_IMAGE_DEFINITIONS[key].path}" alt="${ORIGINAL_IMAGE_DEFINITIONS[key].name}" class="item-icon-inline">`
+                    };
+                }
+
+                // Load Game Object Images
+                for (const key in ORIGINAL_IMAGE_DEFINITIONS) {
+                    const img = new Image();
+                    img.src = ORIGINAL_IMAGE_DEFINITIONS[key].path;
+                    img.onload = () => {
+                        this.imagesLoadedMap[key] = img;
+                        this.imagesLoadedCount++;
+                        this.checkAllAssetsLoaded();
+                    };
+                    img.onerror = () => {
+                        console.warn(`圖片載入失敗: ${ORIGINAL_IMAGE_DEFINITIONS[key].path}。此物件可能無法顯示。`);
+                        this.imagesLoadedMap[key] = null; // Store null if failed
+                        this.imagesLoadedCount++;
+                        this.checkAllAssetsLoaded();
+                    };
+                }
+            }
+
+            checkAllAssetsLoaded() {
+                // FontAwesome and Mascot are 2 extra assets to track
+                const totalExpectedLoads = this.totalImagesToLoad + 2; 
+                const currentLoads = this.imagesLoadedCount + (this.fontAwesomeLoaded ? 1 : 0) + (this.mascotLoaded ? 1 : 0);
+
+                if (currentLoads === totalExpectedLoads) {
+                    // Assign loaded Image objects to OBJECT_TYPES
+                    for (const key in ORIGINAL_IMAGE_DEFINITIONS) {
+                        OBJECT_TYPES[key].img = this.imagesLoadedMap[key];
+                    }
+                    this.loadingOverlay.classList.add('hidden');
+                    this.gameWrapper.style.display = 'block'; // Show game wrapper
+                    this.resizeCanvas(); // <<<<<<<<<<<<<<<<<<<<<<<< ADDED THIS LINE: Ensure canvas is resized AFTER its wrapper is displayed
+                    this.postLoadSetup();
+                }
+            }
+
+            postLoadSetup() {
+                this.score = 0;
+                this.currentLevelIndex = 0;
+                this.scoreDisplay.textContent = this.score;
+                this.gameMessage.textContent = '點擊開始按鈕，捕捉目標！';
+                this.startButton.textContent = '開始挑戰';
+                this.startButton.onclick = () => this.startGame(); 
+                this.gameOverlay.classList.remove('hidden'); 
+                this.scoreBreakdownElement.classList.add('hidden'); // Hide breakdown
+                this.gameState = 'ready';
+                this.objectsAreFrozen = false; 
+                this.highlightEffect = null; 
+                this.clearScreen();
+                
+                // Ensure there is at least one level
+                if (LEVELS.length > 0) {
+                    this.updateMissionDisplay(LEVELS[this.currentLevelIndex]);
+                    // Instructions modal forbidden list is now just a static note
+                    document.getElementById('instructions-forbidden-list').innerHTML = '請在關卡設定中查看具體禁忌物品。';
+                } else {
+                    this.targetsDisplay.innerHTML = '無';
+                    this.forbiddenDisplay.innerHTML = '無';
+                    this.levelNameDisplay.textContent = '沒有定義關卡！';
+                    this.gameMessage.textContent = '沒有設定關卡，無法開始遊戲！';
+                    this.startButton.disabled = true;
+                }
+                
+                // Start the game loop after everything is loaded and set up
+                if (!this.animationFrameId) {
+                    this.animationFrameId = requestAnimationFrame(this.drawGame.bind(this));
+                }
+            }
+
+            // --- Event Listeners ---
+            setupEventListeners() {
+                this.canvas.addEventListener('mousedown', (e) => this.handleCapture(this.getMousePos(e)));
+                this.canvas.addEventListener('touchstart', (e) => {
+                    e.preventDefault(); // Prevent scrolling on mobile
+                    this.handleCapture(this.getMousePos(e));
+                }, { passive: false });
+                this.titleInstructionsButton.onclick = () => this.toggleInstructions();
+            }
+
+            getMousePos(e) {
+                const rect = this.canvas.getBoundingClientRect();
+                let clientX, clientY;
+                if (e.touches && e.touches.length > 0) {
+                    clientX = e.touches[0].clientX;
+                    clientY = e.touches[0].clientY;
+                } else {
+                    clientX = e.clientX;
+                    clientY = e.clientY;
+                }
+                return {
+                    x: clientX - rect.left,
+                    y: clientY - rect.top
+                };
+            }
+
+            resizeCanvas() {
+                const container = this.canvas.parentElement;
+                this.canvasWidth = container.clientWidth;
+                this.canvas.width = this.canvasWidth;
+                this.canvas.height = this.canvasHeight; // Ensure canvas dimensions are set
+            }
+
+            // --- Sound Control ---
+            playSound(frequency, duration, type = 'sine', decayTime = 0.1, volume = 0.5) {
+                if (!this.audioContext || this.audioContext.state === 'suspended') {
+                    this.audioContext.resume().then(() => {
+                        this._createAndPlayOscillator(frequency, duration, type, decayTime, volume);
+                    });
+                } else {
+                    this._createAndPlayOscillator(frequency, duration, type, decayTime, volume);
+                }
+            }
+
+            _createAndPlayOscillator(frequency, duration, type, decayTime, volume) {
+                const oscillator = this.audioContext.createOscillator();
+                const gainNode = this.audioContext.createGain();
+                oscillator.connect(gainNode);
+                gainNode.connect(this.audioContext.destination);
+                oscillator.type = type; 
+                oscillator.frequency.setValueAtTime(frequency, this.audioContext.currentTime);
+                gainNode.gain.setValueAtTime(volume, this.audioContext.currentTime); 
+                gainNode.gain.exponentialRampToValueAtTime(0.0001, this.audioContext.currentTime + decayTime);
+                oscillator.start();
+                oscillator.stop(this.audioContext.currentTime + duration);
+            }
+
+            // --- Game Logic ---
+            startGame() {
+                this.currentLevelIndex = 0; 
+                this.score = 0; // Reset total score for a new game
+                this.scoreDisplay.textContent = this.score;
+                this.initLevel(this.currentLevelIndex);
+            }
+
+            resumeCapturing() {
+                this.objectsAreFrozen = false; 
+                this.gameOverlay.classList.add('hidden'); 
+                this.gameMessage.textContent = `關卡 ${this.currentLevelIndex + 1}: ${LEVELS[this.currentLevelIndex].name} - 倒數繼續!`; 
+                this.highlightEffect = null; // Clear highlight when resuming game
+                this.scoreBreakdownElement.classList.add('hidden'); // Hide breakdown
+                this.gameStartTime = performance.now() - (LEVELS[this.currentLevelIndex].duration - this.timeLeft) * 1000; // Adjust start time to resume countdown
+            }
+
+            initLevel(levelIndex) {
+                if (levelIndex >= LEVELS.length) {
+                    this.gameState = 'win';
+                    // Final game win message and score breakdown
+                    this.gameMessage.innerHTML = `<span class="text-yellow-300 font-bold">🎉 恭喜! 完成所有挑戰!</span>`;
+                    this.displayScoreBreakdown(true); // Show final score breakdown
+                    this.startButton.textContent = '重新開始 (關卡 1)';
+                    this.startButton.onclick = () => this.startGame();
+                    this.gameOverlay.classList.remove('hidden'); 
+                    this.objectsAreFrozen = true; 
+                    return;
+                }
+
+                const level = LEVELS[levelIndex];
+                this.currentLevelIndex = levelIndex; 
+                this.currentLevelScore = 0; // Reset current level score
+                
+                this.gameObjects = []; 
+                this.timeLeft = level.duration;
+                this.timerDisplay.textContent = this.timeLeft.toFixed(1);
+                
+                // 1. Add required and forbidden items
+                const initialObjectIds = new Set();
+                const allForbidden = level.forbidden || []; // Forbidden items are now *only* from the level config
+                
+                [...(level.required || []), ...allForbidden].forEach(id => {
+                    if (OBJECT_TYPES[id] && OBJECT_TYPES[id].img && !initialObjectIds.has(id)) { 
+                        this.gameObjects.push(new GameObject(id, this.canvasWidth, this.canvasHeight));
+                        initialObjectIds.add(id);
+                    } else if (!OBJECT_TYPES[id] || !OBJECT_TYPES[id].img) {
+                        console.warn(`Required/Forbidden item ${id} has no valid image.`);
+                    }
+                });
+
+                // 2. Add bonus items with a chance
+                const bonusKey = Object.keys(OBJECT_TYPES).find(key => OBJECT_TYPES[key].isBonus); // Find any bonus item
+                if (bonusKey && Math.random() < (level.bonusItemChance || 0)) { // Use level's chance or default to 0
+                    if (OBJECT_TYPES[bonusKey] && OBJECT_TYPES[bonusKey].img && !initialObjectIds.has(bonusKey)) { 
+                        this.gameObjects.push(new GameObject(bonusKey, this.canvasWidth, this.canvasHeight));
+                        initialObjectIds.add(bonusKey);
+                    }
+                }
+
+                // 3. Fill remaining slots with other random objects (filler items)
+                const fillerCount = level.objectCount - this.gameObjects.length;
+                for (let i = 0; i < fillerCount; i++) {
+                    const randomFillerTypeId = this.getRandomFillerItem(level);
+                    if (randomFillerTypeId) { 
+                         this.gameObjects.push(new GameObject(randomFillerTypeId, this.canvasWidth, this.canvasHeight));
+                    }
+                }
+                
+                this.gameObjects = this.gameObjects.filter(obj => obj.img !== null);
+
+
+                this.updateMissionDisplay(level);
+                this.levelDisplay.textContent = levelIndex + 1;
+                this.gameMessage.textContent = `關卡 ${levelIndex + 1}: ${level.name} - 倒數開始!`; 
+                this.gameOverlay.classList.add('hidden'); 
+                this.scoreBreakdownElement.classList.add('hidden'); // Hide breakdown for new level
+                
+                this.gameState = 'playing';
+                this.objectsAreFrozen = false; 
+                this.highlightEffect = null; 
+                this.gameStartTime = performance.now(); // Reset timer
+            }
+
+            // Dynamically update the mission display area
+            updateMissionDisplay(level) {
+                const getMissionItemsElements = (itemIds) => {
+                    const fragment = document.createDocumentFragment();
+                    itemIds.forEach(id => {
+                        const objDef = OBJECT_TYPES[id]; 
+                        // Only create elements if objDef and its miniHtmlImg are available
+                        if (objDef && objDef.miniHtmlImg && objDef.name) {
+                            const wrapper = document.createElement('span');
+                            wrapper.classList.add('mission-item-wrapper');
+                            // Using innerHTML here for simplicity of already formatted miniHtmlImg
+                            wrapper.innerHTML = objDef.miniHtmlImg + ' ' + objDef.name; 
+                            fragment.appendChild(wrapper);
+                        }
+                    });
+                    return fragment;
+                };
+                
+                this.targetsDisplay.innerHTML = ''; // Clear previous content
+                this.targetsDisplay.appendChild(getMissionItemsElements(level.required || [])); // Ensure it's an array
+
+                this.forbiddenDisplay.innerHTML = ''; // Clear previous content
+                // Use combined forbidden items for display
+                const allForbidden = level.forbidden || []; // No global forbidden items
+                this.forbiddenDisplay.appendChild(getMissionItemsElements(allForbidden));
+                
+                this.levelNameDisplay.textContent = `限時 ${level.duration} 秒，拍到所有目標即可晉級！`;
+            }
+
+            // Instructions modal forbidden list is now just a static note, no dynamic update needed.
+            // updateInstructionsForbiddenList() {
+            //     document.getElementById('instructions-forbidden-list').innerHTML = '請在關卡設定中查看具體禁忌物品。';
+            // }
+
+            handleCapture(pos) { 
+                if (this.gameState !== 'playing' || this.objectsAreFrozen) return; 
+
+                this.captureEffect = { x: pos.x, y: pos.y, startTime: performance.now() };
+                this.playSound(300, 0.05, 'square', 0.02); 
+
+                const level = LEVELS[this.currentLevelIndex];
+                let visibleTargetsDetected = new Set();    
+                let visibleForbiddenDetected = new Set();  
+                let visibleBonusItemsDetectedCount = 0;        
+                
+                let itemsCaughtInSnapshot = []; // Store all relevant items caught in this snapshot for highlighting
+
+                // First pass: identify all visible items and categorize them
+                for (const obj of this.gameObjects) {
+                    if (obj.isVisibleOnCanvas()) { 
+                        if ((level.required || []).includes(obj.typeId)) { 
+                            visibleTargetsDetected.add(obj.typeId);
+                            itemsCaughtInSnapshot.push({ obj: obj, color: '--score-positive-color' }); // Store CSS variable name
+                        } else if ((level.forbidden || []).includes(obj.typeId)) { 
+                            visibleForbiddenDetected.add(obj.typeId);
+                            itemsCaughtInSnapshot.push({ obj: obj, color: '--score-negative-color' }); // Store CSS variable name
+                        } else if (obj.isBonus) { 
+                            visibleBonusItemsDetectedCount++;
+                            itemsCaughtInSnapshot.push({ obj: obj, color: '--score-bonus-color' }); // Store CSS variable name
+                        }
+                    }
+                }
+
+                let isCurrentSnapshotSuccessful = false;
+                let failureReason = null;
+                let highlightType = 'neutral'; // 'success', 'failure', 'neutral'
+
+                if (visibleForbiddenDetected.size > 0) {
+                    // Failure: forbidden items detected
+                    failureReason = `捕捉到禁忌物品：${Array.from(visibleForbiddenDetected).map(id => OBJECT_TYPES[id].name).join('、')}！`;
+                    highlightType = 'failure';
+                    // All caught items will be highlighted, but the message indicates failure due to forbidden.
+                } else { 
+                    // No forbidden items, check for success condition
+                    const currentLevelRequiredTargets = level.required || [];
+                    const allRequiredTargetsVisible = currentLevelRequiredTargets.length > 0 && currentLevelRequiredTargets.every(reqId => visibleTargetsDetected.has(reqId));
+
+                    if (allRequiredTargetsVisible) {
+                        // Success: all required targets visible
+                        isCurrentSnapshotSuccessful = true; 
+                        highlightType = 'success';
+                        // For success, ensure targets are green, bonuses are gold.
+                        // ItemsCaughtInSnapshot already has these colors, no need to re-assign for success.
+                    } else {
+                        // Neither success nor failure (continue capturing)
+                        isCurrentSnapshotSuccessful = false; 
+                        highlightType = 'neutral';
+                        // In this case, itemsCaughtInSnapshot already has the correct tentative colors.
+                    }
+                }
+                
+                this.objectsAreFrozen = true; 
+                console.log("Captured. Setting highlightEffect:", highlightType, itemsCaughtInSnapshot); // Debug log
+
+                if (isCurrentSnapshotSuccessful || failureReason !== null) {
+                    // Score calculation and level end logic
+                    let levelScoreBreakdown = {
+                        base: 0,
+                        timeBonus: 0,
+                        targetBonus: 0,
+                        bonusItems: 0,
+                        total: 0
+                    };
+
+                    if (isCurrentSnapshotSuccessful) {
+                        levelScoreBreakdown.base = SCORE_PER_CAPTURE;
+                        this.currentLevelScore += SCORE_PER_CAPTURE;
+
+                        const bonusItemPoints = visibleBonusItemsDetectedCount * BONUS_ITEM_SCORE;
+                        levelScoreBreakdown.bonusItems = bonusItemPoints;
+                        this.currentLevelScore += bonusItemPoints;
+                        if (bonusItemPoints > 0) {
+                            this.gameObjects.filter(obj => obj.isBonus && obj.isVisibleOnCanvas()).forEach(bonusObj => {
+                                this.displayBonusMessage(bonusObj.x, bonusObj.y, BONUS_ITEM_SCORE);
+                            });
+                        }
+
+                        const timeBonus = Math.max(0, Math.floor(this.timeLeft)) * TIME_BONUS_MULTIPLIER;
+                        levelScoreBreakdown.timeBonus = timeBonus;
+                        this.currentLevelScore += timeBonus;
+
+                        const targetBonus = visibleTargetsDetected.size * TARGET_BONUS_PER_ITEM;
+                        levelScoreBreakdown.targetBonus = targetBonus;
+                        this.currentLevelScore += targetBonus;
+
+                        this.score += this.currentLevelScore; 
+                    }
+
+                    levelScoreBreakdown.total = this.currentLevelScore; 
+
+                    this.scoreDisplay.textContent = this.score; 
+                    this.checkLevelEnd(isCurrentSnapshotSuccessful, failureReason, itemsCaughtInSnapshot, levelScoreBreakdown, highlightType); // Pass all relevant items for highlighting
+                } else {
+                    // This is the "continue capturing" path for when snapshot is neither success nor failure
+                    this.gameMessage.innerHTML = `<span class="text-gray-400">快照完成！還需努力！</span>`;
+                    this.startButton.textContent = '繼續捕捉';
+                    this.startButton.onclick = () => this.resumeCapturing();
+                    this.gameOverlay.classList.remove('hidden'); 
+                    this.scoreBreakdownElement.classList.add('hidden'); 
+                    // Set highlightEffect to show items caught, with their determined colors
+                    this.highlightEffect = { type: highlightType, items: itemsCaughtInSnapshot, startTime: performance.now() }; 
+                }
+            }
+
+
+            checkLevelEnd(success, reason = null, highlightItems = [], levelScoreBreakdown = null, highlightType = 'neutral') { // Added highlightType parameter
+                this.gameOverlay.classList.remove('hidden'); 
+                this.highlightEffect = { type: highlightType, items: highlightItems, startTime: performance.now() }; // Use the passed highlightType and items
+                
+                if (success) {
+                    this.gameMessage.innerHTML = `<span class="text-green-400 font-bold"><i class="fas fa-trophy"></i> 捕捉成功!</span>`;
+                    this.displayScoreBreakdown(false, levelScoreBreakdown); // Show breakdown for successful level
+                    this.startButton.textContent = '下一關';
+                    this.startButton.onclick = () => {
+                        this.highlightEffect = null; 
+                        this.initLevel(this.currentLevelIndex + 1);
+                    };
+                    this.playSound(800, 0.15, 'sine', 0.1); 
+                    
+                } else {
+                    this.gameState = 'lose';
+                    this.gameMessage.innerHTML = `<span class="text-red-400 font-bold"><i class="fas fa-times-circle"></i> 任務失敗!</span> ${reason ? '原因: ' + reason : '時間用盡了!'}`;
+                    this.scoreBreakdownElement.classList.add('hidden'); // Hide breakdown on failure
+                    this.startButton.textContent = '再試一次';
+                    this.startButton.onclick = () => {
+                        this.highlightEffect = null; 
+                        this.initLevel(this.currentLevelIndex);
+                    };
+                    this.playSound(150, 0.2, 'square', 0.1); 
+                }
+            }
+
+            displayScoreBreakdown(isFinalGameEnd = false, levelScoreBreakdown = null) {
+                this.scoreBreakdownElement.innerHTML = ''; // Clear previous content
+                this.scoreBreakdownElement.classList.remove('hidden');
+
+                if (isFinalGameEnd) {
+                    // Final game end - show total score only
+                    const totalP = document.createElement('p');
+                    totalP.classList.add('total-score');
+                    totalP.innerHTML = `<span>遊戲總分</span> <span>${this.score}</span>`;
+                    this.scoreBreakdownElement.appendChild(totalP);
+                } else if (levelScoreBreakdown) {
+                    // Level success - show breakdown for current level
+                    const baseP = document.createElement('p');
+                    baseP.innerHTML = `<span>基礎分</span> <span>+${levelScoreBreakdown.base}</span>`;
+                    this.scoreBreakdownElement.appendChild(baseP);
+
+                    const timeP = document.createElement('p');
+                    timeP.innerHTML = `<span>時間獎勵 (剩餘 ${Math.max(0, Math.floor(this.timeLeft))}秒)</span> <span>+${levelScoreBreakdown.timeBonus}</span>`;
+                    this.scoreBreakdownElement.appendChild(timeP);
+
+                    const targetP = document.createElement('p');
+                    targetP.innerHTML = `<span>目標數量獎勵</span> <span>+${levelScoreBreakdown.targetBonus}</span>`;
+                    this.scoreBreakdownElement.appendChild(targetP);
+
+                    const bonusP = document.createElement('p');
+                    bonusP.innerHTML = `<span>獎勵物品分</span> <span>+${levelScoreBreakdown.bonusItems}</span>`;
+                    this.scoreBreakdownElement.appendChild(bonusP);
+
+                    const totalP = document.createElement('p');
+                    totalP.classList.add('total-score');
+                    totalP.innerHTML = `<span>本關得分</span> <span>${levelScoreBreakdown.total}</span>`;
+                    this.scoreBreakdownElement.appendChild(totalP);
+                }
+            }
+
+
+            displayBonusMessage(x, y, points) {
+                this.bonusMessages.push({
+                    x: x,
+                    y: y,
+                    text: `+${points} BONUS!`,
+                    startTime: performance.now(),
+                    color: getCssVariable('--particle-positive-color') 
+                });
+                this.playSound(600, 0.1, 'sine', 0.05); 
+            }
+
+            // --- Drawing and Animation Loop ---
+            clearScreen() {
+                this.ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
+                // Attempt to get the CSS variable, fallback if not found or invalid
+                const canvasBgStyle = getComputedStyle(document.documentElement).getPropertyValue('--canvas-bg');
+                let bgColor = '#1c1c4e'; // Default fallback
+
+                if (canvasBgStyle && canvasBgStyle.includes('linear-gradient')) {
+                    // Extract the first color from the linear-gradient definition
+                    const match = canvasBgStyle.match(/linear-gradient\(.+?,?\s*([^,)]+)/);
+                    if (match && match[1]) {
+                        bgColor = match[1].trim();
+                    }
+                } else if (canvasBgStyle) {
+                    bgColor = canvasBgStyle.trim();
+                }
+                
+                this.ctx.fillStyle = bgColor;
+                this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
+            }
+
+            updateGameTime(currentTime) {
+                if (this.gameState === 'playing' && !this.objectsAreFrozen) {
+                    const elapsed = (currentTime - this.gameStartTime) / 1000;
+                    this.timeLeft = LEVELS[this.currentLevelIndex].duration - elapsed;
+                    
+                    if (this.timeLeft <= 0) {
+                        this.timeLeft = 0;
+                        this.timerDisplay.textContent = '0.0';
+                        this.checkLevelEnd(false); // Time's up
+                        return;
+                    }
+                    this.timerDisplay.textContent = this.timeLeft.toFixed(1);
+                }
+            }
+
+            drawGame(currentTime) {
+                if (!this.lastFrameTime) this.lastFrameTime = currentTime;
+                // const deltaTime = currentTime - this.lastFrameTime; // Delta time for framerate independent updates, currently not used for object movement
+                this.lastFrameTime = currentTime;
+
+                this.clearScreen();
+                this.updateGameTime(currentTime); // Update time based on current frame
+
+                const level = LEVELS[this.currentLevelIndex];
+                const speedMultiplier = level ? level.speedMultiplier : 1.0;
+                
+                // Update and draw objects
+                for (let i = this.gameObjects.length - 1; i >= 0; i--) {
+                    const obj = this.gameObjects[i];
+                    obj.update(speedMultiplier); 
+                    obj.draw();
+                    
+                    if (!this.objectsAreFrozen && obj.isOffScreen()) { 
+                        this.gameObjects.splice(i, 1);
+                        const newFillerItem = this.getRandomFillerItem(level);
+                        if (newFillerItem) {
+                            this.gameObjects.push(new GameObject(newFillerItem, this.canvasWidth, this.canvasHeight));
+                        }
+                    }
+                }
+                
+                // Capture effect
+                if (this.captureEffect) {
+                    const elapsed = currentTime - this.captureEffect.startTime;
+                    const duration = 200; 
+                    if (elapsed < duration) {
+                        const alpha = 1 - (elapsed / duration); 
+                        this.ctx.globalAlpha = alpha;
+                        this.ctx.fillStyle = getCssVariable('--screen-flash-color-capture'); // Use helper
+                        this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
+                        this.ctx.globalAlpha = 1.0;
+                    } else {
+                        this.captureEffect = null;
+                    }
+                }
+
+                // Bonus messages
+                for (let i = this.bonusMessages.length - 1; i >= 0; i--) {
+                    const msg = this.bonusMessages[i];
+                    const elapsed = currentTime - msg.startTime;
+                    const duration = 1000; 
+
+                    if (elapsed < duration) {
+                        const alpha = 1 - (elapsed / duration);
+                        this.ctx.save();
+                        this.ctx.font = 'bold 24px Inter';
+                        this.ctx.fillStyle = msg.color; // Already resolved in displayBonusMessage
+                        this.ctx.textAlign = 'center';
+                        this.ctx.textBaseline = 'bottom';
+                        this.ctx.globalAlpha = alpha;
+                        this.ctx.fillText(msg.text, msg.x, msg.y - (elapsed / 20)); 
+                        this.ctx.restore();
+                    } else {
+                        this.bonusMessages.splice(i, 1);
+                    }
+                }
+
+                // Highlight effect
+                if (this.highlightEffect && this.highlightEffect.items.length > 0) {
+                    console.log("Drawing highlight effect:", this.highlightEffect.type, this.highlightEffect.items.length, "items."); // Debug log
+                    this.ctx.save();
+                    this.ctx.globalAlpha = 1.0; 
+                    this.ctx.lineWidth = 4;
+
+                    for (const item of this.highlightEffect.items) {
+                        if (item.obj.isVisibleOnCanvas()) { 
+                            const strokeColor = getCssVariable(item.color); // Resolve CSS variable here
+                            console.log(`  Highlighting ${item.obj.name} with color ${strokeColor}`); // More debug
+                            this.ctx.strokeStyle = strokeColor; 
+                            this.ctx.beginPath();
+                            this.ctx.arc(item.obj.x, item.obj.y, item.obj.size / 2 + 10, 0, Math.PI * 2); 
+                            this.ctx.stroke();
+                        }
+                    }
+                    this.ctx.restore();
+                }
+
+                this.animationFrameId = requestAnimationFrame(this.drawGame.bind(this));
+            }
+
+            // Helper to get a random filler item (not required, not forbidden, not bonus)
+            getRandomFillerItem(level) {
+                // Determine all items that are explicitly 'required' or 'forbidden' in THIS level.
+                const explicitlyExcludedTypes = new Set([
+                    ...(level.required || []), 
+                    ...(level.forbidden || []), 
+                ]);
+
+                // Filter available types to exclude those explicitly meant for specific roles (required/forbidden)
+                // and any bonus items, and items with no images.
+                const potentialFillerTypes = Object.keys(OBJECT_TYPES).filter(id => 
+                    !explicitlyExcludedTypes.has(id) && 
+                    !OBJECT_TYPES[id].isBonus && // Exclude bonus items from fillers
+                    OBJECT_TYPES[id] && OBJECT_TYPES[id].img !== null
+                );
+                
+                if (potentialFillerTypes.length === 0) {
+                    console.warn("No suitable filler items available. Game might be empty or repeat specific items.");
+                    // Fallback to any non-forbidden item if no true fillers
+                    const fallbackFillerTypes = Object.keys(OBJECT_TYPES).filter(id => 
+                        !(level.forbidden || []).includes(id) && OBJECT_TYPES[id] && OBJECT_TYPES[id].img !== null
+                    );
+                    if (fallbackFillerTypes.length > 0) {
+                        return fallbackFillerTypes[Math.floor(Math.random() * fallbackFillerTypes.length)];
+                    }
+                    return null;
+                }
+                
+                // Otherwise, pick from the available filler types
+                return potentialFillerTypes[Math.floor(Math.random() * potentialFillerTypes.length)];
+            }
+
+            // --- Instructions Modal ---
+            toggleInstructions() {
+                this.instructionsModal.classList.toggle('hidden');
+            }
+        }
+
+        // Initialize the game instance
+        const gameInstance = new Game();
+        document.addEventListener('DOMContentLoaded', () => gameInstance.init());
+
+    </script>
+</body>
+</html>
+    </textarea>
+
+    <!-- 引入 SortableJS (for dragging levels) -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.14.0/Sortable.min.js"></script>
+
+    <!-- GENERATOR PAGE COPYRIGHT -->
+    <div id="generator-copyright" class="text-center text-gray-500 text-sm mt-8 pb-4">
+        Copyright © Liyuchiutiger Gongminshen
+    </div>
+
+    <script>
+        // --- App Object: Encapsulates all logic ---
+        const App = {
+            CONFIG: {
+                // PINYIN_MAP 已經被移除
+                THEMES: {
+                    '現代黑藍': {
+                        '--body-bg': 'linear-gradient(135deg, #1a1a2e 0%, #2a003f 100%)',
+                        '--body-text-color': '#e0e7ff',
+                        '--wrapper-bg': 'rgba(30, 30, 50, 0.7)',
+                        '--wrapper-border': '1px solid rgba(120, 80, 255, 0.4)',
+                        '--wrapper-shadow': '0 10px 60px rgba(0, 0, 0, 0.5), 0 0 30px rgba(100, 50, 255, 0.3)',
+                        '--wrapper-text-color': '#e0e7ff',
+                        '--wrapper-h1-color': '#93c5fd', /* blue-300 */
+                        '--canvas-bg': 'linear-gradient(180deg, #3a005f 0%, #5a007f 100%)',
+                        '--canvas-border': '4px solid #00c4ff',
+                        '--canvas-shadow': 'inset 0 0 15px rgba(0, 196, 255, 0.5)',
+                        '--status-item-bg': 'rgba(255, 255, 255, 0.1)',
+                        '--status-item-border': '1px solid rgba(255, 255, 255, 0.2)',
+                        '--status-level-bg': 'rgba(100, 255, 200, 0.1)',
+                        '--status-level-border': 'rgba(100, 255, 200, 0.3)',
+                        '--status-timer-bg': 'rgba(255, 100, 150, 0.1)',
+                        '--status-timer-border': 'rgba(255, 100, 150, 0.3)',
+                        '--status-score-bg': 'rgba(100, 150, 255, 0.1)',
+                        '--status-score-border': 'rgba(100, 150, 255, 0.3)',
+                        '--status-level-text': '#6ee7b7', /* green-300 */
+                        '--status-timer-text': '#fbcfe8', /* pink-300 */
+                        '--status-score-text': '#93c5fd', /* blue-300 */
+                        '--mission-bg': 'rgba(128, 0, 128, 0.4)', /* purple-900/40 */
+                        '--mission-border': '4px solid #60a5fa', /* blue-400 */
+                        '--mission-text-color': '#fff',
+                        '--mission-h2-color': '#93c5fd',
+                        '--mission-target-icon-color': '#6ee7b7',
+                        '--mission-target-text-color': '#6ee7b7',
+                        '--mission-forbidden-icon-color': '#fca5a5',
+                        '--mission-forbidden-text-color': '#fca5a5',
+                        '--mission-level-name-color': '#d1d5db', /* gray-300 */
+                        '--button-bg': 'linear-gradient(145deg, #8a2be2, #c080ff)',
+                        '--button-color': '#ffffff',
+                        '--button-shadow': '0 4px 15px rgba(138, 43, 226, 0.5), 0 0 20px rgba(192, 128, 255, 0.7)',
+                        '--button-hover-shadow': '0 6px 20px rgba(138, 43, 226, 0.8), 0 0 30px rgba(192, 128, 255, 0.9)',
+                        '--modal-bg': '#2c004a',
+                        '--modal-border': '1px solid rgba(192, 128, 255, 0.4)',
+                        '--modal-shadow': '0 0 40px rgba(138, 43, 226, 0.6)',
+                        '--modal-h2-color': '#93c5fd',
+                        '--modal-h3-color': '#6ee7b7',
+                        '--modal-close-color': '#9ca3af',
+                        '--modal-hover-close-color': '#fff',
+                        '--title-instructions-button-color': '#00c4ff',
+                        '--title-instructions-button-hover-color': '#8a2be2',
+                        '--screen-flash-color-capture': 'rgba(255, 255, 255, 0.6)',
+                        '--score-positive-color': '#90EE90',
+                        '--score-negative-color': '#FF6347',
+                        '--score-bonus-color': '#FFD700', /* Gold for bonus highlight */
+                        '--particle-positive-color': '#FFD700',
+                        // New theme variables for new game mechanics
+                        '--loading-overlay-bg': '#1a1a2e',
+                        '--loading-overlay-text-color': '#e0e7ff',
+                        '--spinner-border-color-light': 'rgba(255, 255, 255, 0.3)',
+                        '--spinner-border-color-dark': '#00c4ff',
+                        '--score-breakdown-bg': 'rgba(30, 30, 50, 0.4)',
+                        '--score-breakdown-border': '1px solid rgba(120, 80, 255, 0.3)',
+                        '--score-breakdown-text-color': '#e0e7ff',
+                        '--score-breakdown-label-color': '#aebfd1',
+                        '--score-breakdown-total-color': '#93c5fd',
+                        '--score-breakdown-divider-color': 'rgba(255, 255, 255, 0.3)',
+                        '--mascot-hover-shadow-color1': '#00c4ff',
+                        '--mascot-hover-shadow-color2': '#8a2be2',
+                        '--mascot-hover-shadow-color3': '#c080ff',
+                        '--mascot-hover-shadow-color4': '#00ffc4',
+                        '--copyright-text-color': '#9ca3af',
+                    },
+                    '經典木質': {
+                        '--body-bg': 'linear-gradient(135deg, #a88460 0%, #7c5a3d 100%)',
+                        '--body-text-color': '#3e2e21',
+                        '--wrapper-bg': 'rgba(100, 75, 50, 0.8)',
+                        '--wrapper-border': '1px solid rgba(150, 120, 90, 0.6)',
+                        '--wrapper-shadow': '0 8px 30px rgba(0, 0, 0, 0.4), 0 0 15px rgba(150, 120, 90, 0.2)',
+                        '--wrapper-text-color': '#f5deb3',
+                        '--wrapper-h1-color': '#f0e68c', /* Khaki */
+                        '--canvas-bg': 'linear-gradient(180deg, #5b876e 0%, #4b6a5a 100%)',
+                        '--canvas-border': '4px solid #8B4513', /* SaddleBrown */
+                        '--canvas-shadow': 'inset 0 0 10px rgba(139, 69, 19, 0.4)',
+                        '--status-item-bg': 'rgba(255, 255, 255, 0.15)',
+                        '--status-item-border': '1px solid rgba(255, 255, 255, 0.25)',
+                        '--status-level-bg': 'rgba(173, 216, 230, 0.15)', /* LightBlue */
+                        '--status-level-border': 'rgba(173, 216, 230, 0.3)',
+                        '--status-timer-bg': 'rgba(255, 165, 0, 0.15)', /* Orange */
+                        '--status-timer-border': 'rgba(255, 165, 0, 0.3)',
+                        '--status-score-bg': 'rgba(152, 251, 152, 0.15)', /* PaleGreen */
+                        '--status-score-border': 'rgba(152, 251, 152, 0.3)',
+                        '--status-level-text': '#b0e0e6', /* PowderBlue */
+                        '--status-timer-text': '#ffcc80', /* Light Orange */
+                        '--status-score-text': '#98fb98', /* PaleGreen */
+                        '--mission-bg': 'rgba(80, 50, 30, 0.7)',
+                        '--mission-border': '4px solid #d2b48c', /* Tan */
+                        '--mission-text-color': '#fdf5e6', /* OldLace */
+                        '--mission-h2-color': '#f0e68c',
+                        '--mission-target-icon-color': '#90ee90',
+                        '--mission-target-text-color': '#90ee90',
+                        '--mission-forbidden-icon-color': '#ff6347',
+                        '--mission-forbidden-text-color': '#ff6347',
+                        '--mission-level-name-color': '#deb887', /* BurlyWood */
+                        '--button-bg': 'linear-gradient(145deg, #d2b48c, #a08060)', /* Tan to darker */
+                        '--button-color': '#3e2e21',
+                        '--button-shadow': '0 4px 15px rgba(0, 0, 0, 0.3), 0 0 10px rgba(210, 180, 140, 0.5)',
+                        '--button-hover-shadow': '0 6px 20px rgba(0, 0, 0, 0.4), 0 0 15px rgba(210, 180, 140, 0.7)',
+                        '--modal-bg': '#7a523a',
+                        '--modal-border': '1px solid rgba(210, 180, 140, 0.6)',
+                        '--modal-shadow': '0 0 25px rgba(80, 50, 30, 0.7)',
+                        '--modal-h2-color': '#f0e68c',
+                        '--modal-h3-color': '#90ee90',
+                        '--modal-close-color': '#fdf5e6',
+                        '--modal-hover-close-color': '#fff',
+                        '--title-instructions-button-color': '#f0e68c',
+                        '--title-instructions-button-hover-color': '#d2b48c',
+                        '--screen-flash-color-capture': 'rgba(255, 255, 255, 0.6)',
+                        '--score-positive-color': '#90ee90',
+                        '--score-negative-color': '#ff6347',
+                        '--score-bonus-color': '#deb887', /* BurlyWood for bonus highlight */
+                        '--particle-positive-color': '#deb887', /* BurlyWood */
+                        // New theme variables for new game mechanics
+                        '--loading-overlay-bg': '#a88460',
+                        '--loading-overlay-text-color': '#3e2e21',
+                        '--spinner-border-color-light': 'rgba(255, 255, 255, 0.3)',
+                        '--spinner-border-color-dark': '#8B4513',
+                        '--score-breakdown-bg': 'rgba(80, 50, 30, 0.4)',
+                        '--score-breakdown-border': '1px solid rgba(150, 120, 90, 0.3)',
+                        '--score-breakdown-text-color': '#fdf5e6',
+                        '--score-breakdown-label-color': '#d2b48c',
+                        '--score-breakdown-total-color': '#f0e68c',
+                        '--score-breakdown-divider-color': 'rgba(255, 255, 255, 0.3)',
+                        '--mascot-hover-shadow-color1': '#f0e68c',
+                        '--mascot-hover-shadow-color2': '#d2b48c',
+                        '--mascot-hover-shadow-color3': '#a08060',
+                        '--mascot-hover-shadow-color4': '#8B4513',
+                        '--copyright-text-color': '#7f8c8d',
+                    },
+                    '明亮橙黃': {
+                        '--body-bg': 'linear-gradient(135deg, #fceabb 0%, #f8b500 100%)',
+                        '--body-text-color': '#333333',
+                        '--wrapper-bg': 'rgba(255, 255, 255, 0.9)',
+                        '--wrapper-border': '1px solid rgba(255, 165, 0, 0.6)',
+                        '--wrapper-shadow': '0 10px 40px rgba(0, 0, 0, 0.2), 0 0 20px rgba(255, 165, 0, 0.4)',
+                        '--wrapper-text-color': '#333333',
+                        '--wrapper-h1-color': '#ff8c00', /* DarkOrange */
+                        '--canvas-bg': 'linear-gradient(180deg, #ffd700 0%, #ffa500 100%)',
+                        '--canvas-border': '4px solid #ff4500', /* OrangeRed */
+                        '--canvas-shadow': 'inset 0 0 12px rgba(255, 69, 0, 0.5)',
+                        '--status-item-bg': 'rgba(0, 0, 0, 0.05)',
+                        '--status-item-border': '1px solid rgba(0, 0, 0, 0.1)',
+                        '--status-level-bg': 'rgba(144, 238, 144, 0.15)', /* LightGreen */
+                        '--status-level-border': 'rgba(144, 238, 144, 0.3)',
+                        '--status-timer-bg': 'rgba(255, 99, 71, 0.15)', /* Tomato */
+                        '--status-timer-border': 'rgba(255, 99, 71, 0.3)',
+                        '--status-score-bg': 'rgba(30, 144, 255, 0.15)', /* DodgerBlue */
+                        '--status-score-border': 'rgba(30, 144, 255, 0.3)',
+                        '--status-level-text': '#66bb66', /* light green */
+                        '--status-timer-text': '#ff7f50', /* coral */
+                        '--status-score-text': '#6495ed', /* cornflowerblue */
+                        '--mission-bg': 'rgba(255, 140, 0, 0.4)', /* DarkOrange */
+                        '--mission-border': '4px solid #ffdab9', /* PeachPuff */
+                        '--mission-text-color': '#333333',
+                        '--mission-h2-color': '#ff8c00',
+                        '--mission-target-icon-color': '#008000',
+                        '--mission-target-text-color': '#008000',
+                        '--mission-forbidden-icon-color': '#b22222',
+                        '--mission-forbidden-text-color': '#b22222',
+                        '--mission-level-name-color': '#696969', /* DimGray */
+                        '--button-bg': 'linear-gradient(145deg, #ff8c00, #ffa500)', /* DarkOrange to Orange */
+                        '--button-color': '#ffffff',
+                        '--button-shadow': '0 4px 15px rgba(255, 140, 0, 0.5), 0 0 20px rgba(255, 165, 0, 0.7)',
+                        '--button-hover-shadow': '0 6px 20px rgba(255, 140, 0, 0.8), 0 0 30px rgba(255, 165, 0, 0.9)',
+                        '--modal-bg': '#ffbf00', /* Amber */
+                        '--modal-border': '1px solid rgba(255, 165, 0, 0.6)',
+                        '--modal-shadow': '0 0 30px rgba(255, 140, 0, 0.6)',
+                        '--modal-h2-color': '#b8860b', /* DarkGoldenrod */
+                        '--modal-h3-color': '#32cd32', /* LimeGreen */
+                        '--modal-close-color': '#696969',
+                        '--modal-hover-close-color': '#333333',
+                        '--title-instructions-button-color': '#ff4500',
+                        '--title-instructions-button-hover-color': '#ff8c00',
+                        '--screen-flash-color-capture': 'rgba(255, 255, 255, 0.6)',
+                        '--score-positive-color': '#008000', /* Green */
+                        '--score-negative-color': '#b22222', /* FireBrick */
+                        '--score-bonus-color': '#ffd700', /* Gold for bonus highlight */
+                        '--particle-positive-color': '#ffd700', /* Gold */
+                        // New theme variables for new game mechanics
+                        '--loading-overlay-bg': '#f8b500',
+                        '--loading-overlay-text-color': '#333333',
+                        '--spinner-border-color-light': 'rgba(255, 255, 255, 0.3)',
+                        '--spinner-border-color-dark': '#ff4500',
+                        '--score-breakdown-bg': 'rgba(255, 140, 0, 0.4)',
+                        '--score-breakdown-border': '1px solid rgba(255, 165, 0, 0.3)',
+                        '--score-breakdown-text-color': '#333333',
+                        '--score-breakdown-label-color': '#696969',
+                        '--score-breakdown-total-color': '#ff8c00',
+                        '--score-breakdown-divider-color': 'rgba(0, 0, 0, 0.3)',
+                        '--mascot-hover-shadow-color1': '#ffd700',
+                        '--mascot-hover-shadow-color2': '#ff8c00',
+                        '--mascot-hover-shadow-color3': '#ff4500',
+                        '--mascot-hover-shadow-color4': '#f8b500',
+                        '--copyright-text-color': '#7f8c8d',
+                    },
+                    '賽博龐克': {
+                        '--body-bg': 'linear-gradient(135deg, #0f0f0f 0%, #1e0f2e 100%)',
+                        '--body-text-color': '#00ffc4', /* Neon Green */
+                        '--wrapper-bg': 'rgba(20, 20, 30, 0.9)',
+                        '--wrapper-border': '1px solid rgba(0, 255, 196, 0.5)',
+                        '--wrapper-shadow': '0 10px 60px rgba(0, 255, 196, 0.3), 0 0 30px rgba(128, 0, 255, 0.4)',
+                        '--wrapper-text-color': '#00ffc4',
+                        '--wrapper-h1-color': '#ff00ff', /* Magenta */
+                        '--canvas-bg': 'repeating-linear-gradient(45deg, #1a002a 0%, #1a002a 10px, #2a003f 10px, #2a003f 20px)',
+                        '--canvas-border': '4px solid #00ffc4',
+                        '--canvas-shadow': 'inset 0 0 15px rgba(0, 255, 196, 0.7)',
+                        '--status-item-bg': 'rgba(0, 255, 196, 0.1)',
+                        '--status-item-border': '1px solid rgba(0, 255, 196, 0.2)',
+                        '--status-level-bg': 'rgba(0, 255, 255, 0.15)', /* Cyan */
+                        '--status-level-border': 'rgba(0, 255, 255, 0.3)',
+                        '--status-timer-bg': 'rgba(255, 0, 255, 0.15)', /* Magenta */
+                        '--status-timer-border': 'rgba(255, 0, 255, 0.3)',
+                        '--status-score-bg': 'rgba(255, 255, 0, 0.15)', /* Yellow */
+                        '--status-score-border': 'rgba(255, 255, 0, 0.3)',
+                        '--status-level-text': '#00ffff',
+                        '--status-timer-text': '#ff00ff',
+                        '--status-score-text': '#ffff00',
+                        '--mission-bg': 'rgba(128, 0, 128, 0.6)', /* dark purple */
+                        '--mission-border': '4px solid #ff00ff', /* Magenta */
+                        '--mission-text-color': '#00ffc4',
+                        '--mission-h2-color': '#ff00ff',
+                        '--mission-target-icon-color': '#00ffff',
+                        '--mission-target-text-color': '#00ffff',
+                        '--mission-forbidden-icon-color': '#ff00ff',
+                        '--mission-forbidden-text-color': '#ff00ff',
+                        '--mission-level-name-color': '#aaffaa',
+                        '--button-bg': 'linear-gradient(145deg, #ff00ff, #00ffff)', /* Magenta to Cyan */
+                        '--button-color': '#0f0f0f',
+                        '--button-shadow': '0 4px 15px rgba(255, 0, 255, 0.5), 0 0 20px rgba(0, 255, 255, 0.7)',
+                        '--button-hover-shadow': '0 6px 20px rgba(255, 0, 255, 0.8), 0 0 30px rgba(0, 255, 255, 0.9)',
+                        '--modal-bg': '#1a002a',
+                        '--modal-border': '1px solid rgba(0, 255, 196, 0.5)',
+                        '--modal-shadow': '0 0 40px rgba(128, 0, 255, 0.6)',
+                        '--modal-h2-color': '#ff00ff',
+                        '--modal-h3-color': '#00ffff',
+                        '--modal-close-color': '#00ffc4',
+                        '--modal-hover-close-color': '#ffff00',
+                        '--title-instructions-button-color': '#00ffc4',
+                        '--title-instructions-button-hover-color': '#ff00ff',
+                        '--screen-flash-color-capture': 'rgba(255, 255, 255, 0.6)',
+                        '--score-positive-color': '#00ff00', /* Green */
+                        '--score-negative-color': '#ff0000', /* Red */
+                        '--score-bonus-color': '#ffff00', /* Yellow for bonus highlight */
+                        '--particle-positive-color': '#ffff00', /* Yellow */
+                        // New theme variables for new game mechanics
+                        '--loading-overlay-bg': '#0f0f0f',
+                        '--loading-overlay-text-color': '#00ffc4',
+                        '--spinner-border-color-light': 'rgba(0, 255, 196, 0.3)',
+                        '--spinner-border-color-dark': '#00c4ff',
+                        '--score-breakdown-bg': 'rgba(128, 0, 128, 0.6)',
+                        '--score-breakdown-border': '1px solid rgba(0, 255, 196, 0.3)',
+                        '--score-breakdown-text-color': '#00ffc4',
+                        '--score-breakdown-label-color': '#00ffff',
+                        '--score-breakdown-total-color': '#ff00ff',
+                        '--score-breakdown-divider-color': 'rgba(0, 255, 196, 0.3)',
+                        '--mascot-hover-shadow-color1': '#ff00ff',
+                        '--mascot-hover-shadow-color2': '#00ffff',
+                        '--mascot-hover-shadow-color3': '#00ffc4',
+                        '--mascot-hover-shadow-color4': '#ffff00',
+                        '--copyright-text-color': '#aaffaa',
+                    },
+                    '田園森林': {
+                        '--body-bg': 'linear-gradient(135deg, #e0ffe0 0%, #c8f0c8 100%)',
+                        '--body-text-color': '#336633',
+                        '--wrapper-bg': 'rgba(240, 255, 240, 0.8)',
+                        '--wrapper-border': '1px solid rgba(100, 150, 100, 0.5)',
+                        '--wrapper-shadow': '0 8px 30px rgba(0, 0, 0, 0.2), 0 0 15px rgba(100, 150, 100, 0.3)',
+                        '--wrapper-text-color': '#336633',
+                        '--wrapper-h1-color': '#228b22', /* ForestGreen */
+                        '--canvas-bg': 'linear-gradient(180deg, #5c8d64 0%, #3e6d42 100%)',
+                        '--canvas-border': '4px solid #8b4513', /* SaddleBrown */
+                        '--canvas-shadow': 'inset 0 0 10px rgba(60, 80, 60, 0.5)',
+                        '--status-item-bg': 'rgba(255, 255, 255, 0.2)',
+                        '--status-item-border': '1px solid rgba(255, 255, 255, 0.3)',
+                        '--status-level-bg': 'rgba(173, 216, 230, 0.2)', /* LightBlue */
+                        '--status-level-border': 'rgba(173, 216, 230, 0.4)',
+                        '--status-timer-bg': 'rgba(255, 99, 71, 0.2)', /* Tomato */
+                        '--status-timer-border': 'rgba(255, 99, 71, 0.4)',
+                        '--status-score-bg': 'rgba(255, 215, 0, 0.2)', /* Gold */
+                        '--status-score-border': 'rgba(255, 215, 0, 0.4)',
+                        '--status-level-text': '#66cdaa', /* MediumAquamarine */
+                        '--status-timer-text': '#ffb6c1', /* LightPink */
+                        '--status-score-text': '#ffd700', /* Gold */
+                        '--mission-bg': 'rgba(60, 90, 60, 0.7)',
+                        '--mission-border': '4px solid #a0522d', /* Sienna */
+                        '--mission-text-color': '#e0ffe0',
+                        '--mission-h2-color': '#98fb98', /* PaleGreen */
+                        '--mission-target-icon-color': '#7cfc00', /* LawnGreen */
+                        '--mission-target-text-color': '#7cfc00',
+                        '--mission-forbidden-icon-color': '#cc0000',
+                        '--mission-forbidden-text-color': '#cc0000',
+                        '--mission-level-name-color': '#a9a9a9', /* DarkGray */
+                        '--button-bg': 'linear-gradient(145deg, #3cb371, #6b8e23)', /* MediumSeaGreen to OliveDrab */
+                        '--button-color': '#ffffff',
+                        '--button-shadow': '0 4px 15px rgba(60, 179, 113, 0.5), 0 0 20px rgba(107, 142, 35, 0.7)',
+                        '--button-hover-shadow': '0 6px 20px rgba(60, 179, 113, 0.8), 0 0 30px rgba(107, 142, 35, 0.9)',
+                        '--modal-bg': '#4f7942', /* DarkMossGreen */
+                        '--modal-border': '1px solid rgba(150, 200, 150, 0.5)',
+                        '--modal-shadow': '0 0 30px rgba(60, 90, 60, 0.7)',
+                        '--modal-h2-color': '#90ee90',
+                        '--modal-h3-color': '#f0e68c',
+                        '--modal-close-color': '#e0ffe0',
+                        '--modal-hover-close-color': '#ffffff',
+                        '--title-instructions-button-color': '#228b22',
+                        '--title-instructions-button-hover-color': '#3cb371',
+                        '--screen-flash-color-capture': 'rgba(255, 255, 255, 0.6)',
+                        '--score-positive-color': '#008000', /* Green */
+                        '--score-negative-color': '#b22222', /* FireBrick */
+                        '--score-bonus-color': '#ffd700', /* Gold for bonus highlight */
+                        '--particle-positive-color': '#add8e6', /* LightBlue */
+                        // New theme variables for new game mechanics
+                        '--loading-overlay-bg': '#e0ffe0',
+                        '--loading-overlay-text-color': '#336633',
+                        '--spinner-border-color-light': 'rgba(255, 255, 255, 0.3)',
+                        '--spinner-border-color-dark': '#3cb371',
+                        '--score-breakdown-bg': 'rgba(60, 90, 60, 0.4)',
+                        '--score-breakdown-border': '1px solid rgba(100, 150, 100, 0.3)',
+                        '--score-breakdown-text-color': '#e0ffe0',
+                        '--score-breakdown-label-color': '#a0522d',
+                        '--score-breakdown-total-color': '#98fb98',
+                        '--score-breakdown-divider-color': 'rgba(255, 255, 255, 0.3)',
+                        '--mascot-hover-shadow-color1': '#7cfc00',
+                        '--mascot-hover-shadow-color2': '#3cb371',
+                        '--mascot-hover-shadow-color3': '#6b8e23',
+                        '--mascot-hover-shadow-color4': '#228b22',
+                        '--copyright-text-color': '#a9a9a9',
+                    },
+                    '彩虹漸層': {
+                        '--body-bg': 'linear-gradient(135deg, #ff7e5f, #feb47b, #84fab0, #8fd3f4)',
+                        '--body-text-color': '#333333',
+                        '--wrapper-bg': 'rgba(255, 255, 255, 0.9)',
+                        '--wrapper-border': '1px solid rgba(128, 0, 128, 0.3)', /* Purple */
+                        '--wrapper-shadow': '0 10px 40px rgba(0, 0, 0, 0.2), 0 0 20px rgba(255, 100, 200, 0.4)',
+                        '--wrapper-text-color': '#333333',
+                        '--wrapper-h1-color': '#8e2de2', /* Darker Purple */
+                        '--canvas-bg': 'linear-gradient(180deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #9400d3)', /* Full Rainbow */
+                        '--canvas-border': '4px solid #ff1493', /* DeepPink */
+                        '--canvas-shadow': 'inset 0 0 15px rgba(255, 20, 147, 0.7)',
+                        '--status-item-bg': 'rgba(0, 0, 0, 0.05)',
+                        '--status-item-border': '1px solid rgba(0, 0, 0, 0.1)',
+                        '--status-level-bg': 'rgba(255, 192, 203, 0.2)', /* Pink */
+                        '--status-level-border': 'rgba(255, 192, 203, 0.4)',
+                        '--status-timer-bg': 'rgba(173, 216, 230, 0.2)', /* LightBlue */
+                        '--status-timer-border': 'rgba(173, 216, 230, 0.4)',
+                        '--status-score-bg': 'rgba(144, 238, 144, 0.2)', /* LightGreen */
+                        '--status-score-border': 'rgba(144, 238, 144, 0.4)',
+                        '--status-level-text': '#ff69b4', /* HotPink */
+                        '--status-timer-text': '#87cefa', /* LightSkyBlue */
+                        '--status-score-text': '#32cd32', /* LimeGreen */
+                        '--mission-bg': 'rgba(128, 0, 128, 0.4)',
+                        '--mission-border': '4px solid #ff69b4', /* HotPink */
+                        '--mission-text-color': '#333333',
+                        '--mission-h2-color': '#8e2de2',
+                        '--mission-target-icon-color': '#008000',
+                        '--mission-target-text-color': '#008000',
+                        '--mission-forbidden-icon-color': '#b22222',
+                        '--mission-forbidden-text-color': '#b22222',
+                        '--mission-level-name-color': '#696969',
+                        '--button-bg': 'linear-gradient(145deg, #ff1493, #8a2be2)', /* DeepPink to BlueViolet */
+                        '--button-color': '#ffffff',
+                        '--button-shadow': '0 4px 15px rgba(255, 20, 147, 0.5), 0 0 20px rgba(138, 43, 226, 0.7)',
+                        '--button-hover-shadow': '0 6px 20px rgba(255, 20, 147, 0.8), 0 0 30px rgba(138, 43, 226, 0.9)',
+                        '--modal-bg': '#f08080', /* LightCoral */
+                        '--modal-border': '1px solid rgba(255, 100, 200, 0.6)',
+                        '--modal-shadow': '0 0 30px rgba(255, 20, 147, 0.6)',
+                        '--modal-h2-color': '#8a2be2',
+                        '--modal-h3-color': '#32cd32',
+                        '--modal-close-color': '#ffffff',
+                        '--modal-hover-close-color': '#000000',
+                        '--title-instructions-button-color': '#ff69b4',
+                        '--title-instructions-button-hover-color': '#ff1493',
+                        '--screen-flash-color-capture': 'rgba(255, 255, 255, 0.6)',
+                        '--score-positive-color': '#008000',
+                        '--score-negative-color': '#b22222',
+                        '--score-bonus-color': '#ffd700', /* Gold for bonus highlight */
+                        '--particle-positive-color': '#ff0000', /* Red */
+                        // New theme variables for new game mechanics
+                        '--loading-overlay-bg': 'linear-gradient(135deg, #ff7e5f, #84fab0)',
+                        '--loading-overlay-text-color': '#333333',
+                        '--spinner-border-color-light': 'rgba(255, 255, 255, 0.3)',
+                        '--spinner-border-color-dark': '#ff1493',
+                        '--score-breakdown-bg': 'rgba(128, 0, 128, 0.4)',
+                        '--score-breakdown-border': '1px solid rgba(255, 100, 200, 0.3)',
+                        '--score-breakdown-text-color': '#333333',
+                        '--score-breakdown-label-color': '#8e2de2',
+                        '--score-breakdown-total-color': '#ff1493',
+                        '--score-breakdown-divider-color': 'rgba(0, 0, 0, 0.3)',
+                        '--mascot-hover-shadow-color1': '#ff1493',
+                        '--mascot-hover-shadow-color2': '#8a2be2',
+                        '--mascot-hover-shadow-color3': '#c080ff',
+                        '--mascot-hover-shadow-color4': '#ff69b4',
+                        '--copyright-text-color': '#696969',
+                    },
+                    '粉紅泡泡': {
+                        '--body-bg': 'linear-gradient(135deg, #ffe4e1 0%, #ffc0cb 100%)',
+                        '--body-text-color': '#8b008b', /* DarkMagenta */
+                        '--wrapper-bg': 'rgba(255, 240, 245, 0.9)', /* LavenderBlush */
+                        '--wrapper-border': '1px solid rgba(255, 192, 203, 0.6)',
+                        '--wrapper-shadow': '0 10px 40px rgba(255, 192, 203, 0.3), 0 0 20px rgba(255, 192, 203, 0.5)',
+                        '--wrapper-text-color': '#8b008b',
+                        '--wrapper-h1-color': '#ff69b4', /* HotPink */
+                        '--canvas-bg': 'linear-gradient(180deg, #ffc0cb 0%, #e0b0ff 100%)', /* Pink to Thistle */
+                        '--canvas-border': '4px solid #da70d6', /* Orchid */
+                        '--canvas-shadow': 'inset 0 0 15px rgba(218, 112, 214, 0.7)',
+                        '--status-item-bg': 'rgba(255, 255, 255, 0.1)',
+                        '--status-item-border': '1px solid rgba(255, 255, 255, 0.2)',
+                        '--status-level-bg': 'rgba(173, 216, 230, 0.2)', /* LightBlue */
+                        '--status-level-border': 'rgba(173, 216, 230, 0.4)',
+                        '--status-timer-bg': 'rgba(255, 99, 71, 0.2)', /* Tomato */
+                        '--status-timer-border': 'rgba(255, 99, 71, 0.4)',
+                        '--status-score-bg': 'rgba(144, 238, 144, 0.2)', /* LightGreen */
+                        '--status-score-border': 'rgba(144, 238, 144, 0.4)',
+                        '--status-level-text': '#ffb6c1', /* LightPink */
+                        '--status-timer-text': '#dda0dd', /* Plum */
+                        '--status-score-text': '#9370db', /* MediumPurple */
+                        '--mission-bg': 'rgba(255, 105, 180, 0.5)', /* HotPink */
+                        '--mission-border': '4px solid #e6e6fa', /* Lavender */
+                        '--mission-text-color': '#8b008b',
+                        '--mission-h2-color': '#ff69b4',
+                        '--mission-target-icon-color': '#ba55d3', /* MediumOrchid */
+                        '--mission-target-text-color': '#ba55d3',
+                        '--mission-forbidden-icon-color': '#dc143c', /* Crimson */
+                        '--mission-forbidden-text-color': '#dc143c',
+                        '--mission-level-name-color': '#c0c0c0', /* Silver */
+                        '--button-bg': 'linear-gradient(145deg, #ff69b4, #da70d6)', /* HotPink to Orchid */
+                        '--button-color': '#ffffff',
+                        '--button-shadow': '0 4px 15px rgba(255, 105, 180, 0.5), 0 0 20px rgba(218, 112, 214, 0.7)',
+                        '--button-hover-shadow': '0 6px 20px rgba(255, 105, 180, 0.8), 0 0 30px rgba(218, 112, 214, 0.9)',
+                        '--modal-bg': '#ffb6c1', /* LightPink */
+                        '--modal-border': '1px solid rgba(255, 192, 203, 0.6)',
+                        '--modal-shadow': '0 0 30px rgba(255, 105, 180, 0.6)',
+                        '--modal-h2-color': '#8b008b',
+                        '--modal-h3-color': '#ba55d3',
+                        '--modal-close-color': '#8b008b',
+                        '--modal-hover-close-color': '#ffffff',
+                        '--title-instructions-button-color': '#ff69b4',
+                        '--title-instructions-button-hover-color': '#da70d6',
+                        '--screen-flash-color-capture': 'rgba(255, 255, 255, 0.6)',
+                        '--score-positive-color': '#8a2be2', /* BlueViolet */
+                        '--score-negative-color': '#dc143c', /* Crimson */
+                        '--score-bonus-color': '#ffd700', /* Gold for bonus highlight */
+                        '--particle-positive-color': '#ffebcd', /* BlanchedAlmond */
+                        // New theme variables for new game mechanics
+                        '--loading-overlay-bg': '#ffe4e1',
+                        '--loading-overlay-text-color': '#8b008b',
+                        '--spinner-border-color-light': 'rgba(255, 192, 203, 0.3)',
+                        '--spinner-border-color-dark': '#ff69b4',
+                        '--score-breakdown-bg': 'rgba(255, 105, 180, 0.5)',
+                        '--score-breakdown-border': '1px solid rgba(255, 192, 203, 0.3)',
+                        '--score-breakdown-text-color': '#8b008b',
+                        '--score-breakdown-label-color': '#e6e6fa',
+                        '--score-breakdown-total-color': '#ff69b4',
+                        '--score-breakdown-divider-color': 'rgba(255, 255, 255, 0.3)',
+                        '--mascot-hover-shadow-color1': '#ff69b4',
+                        '--mascot-hover-shadow-color2': '#da70d6',
+                        '--mascot-hover-shadow-color3': '#e0b0ff',
+                        '--mascot-hover-shadow-color4': '#ffe4e1',
+                        '--copyright-text-color': '#c0c0c0',
+                    },
+                    '海洋之心': {
+                        '--body-bg': 'linear-gradient(135deg, #001f3f 0%, #0074d9 100%)',
+                        '--body-text-color': '#e0f2f7',
+                        '--wrapper-bg': 'rgba(0, 50, 100, 0.7)',
+                        '--wrapper-border': '1px solid rgba(173, 216, 230, 0.5)', /* LightBlue */
+                        '--wrapper-shadow': '0 10px 60px rgba(0, 0, 0, 0.4), 0 0 30px rgba(0, 191, 255, 0.3)', /* DeepSkyBlue */
+                        '--wrapper-text-color': '#e0f2f7',
+                        '--wrapper-h1-color': '#87ceeb', /* SkyBlue */
+                        '--canvas-bg': 'linear-gradient(180deg, #00bfff 0%, #1e90ff 100%)', /* DeepSkyBlue to DodgerBlue */
+                        '--canvas-border': '4px solid #4682b4', /* SteelBlue */
+                        '--canvas-shadow': 'inset 0 0 15px rgba(70, 130, 180, 0.7)',
+                        '--status-item-bg': 'rgba(255, 255, 255, 0.15)',
+                        '--status-item-border': '1px solid rgba(255, 255, 255, 0.25)',
+                        '--status-level-bg': 'rgba(144, 238, 144, 0.15)', /* LightGreen */
+                        '--status-level-border': 'rgba(144, 238, 144, 0.3)',
+                        '--status-timer-bg': 'rgba(255, 99, 71, 0.15)', /* Tomato */
+                        '--status-timer-border': 'rgba(255, 99, 71, 0.3)',
+                        '--status-score-bg': 'rgba(255, 215, 0, 0.15)', /* Gold */
+                        '--status-score-border': 'rgba(255, 215, 0, 0.3)',
+                        '--status-level-text': '#7fffd4', /* Aquamarine */
+                        '--status-timer-text': '#ffb6c1', /* LightPink */
+                        '--status-score-text': '#ffd700', /* Gold */
+                        '--mission-bg': 'rgba(0, 70, 140, 0.6)',
+                        '--mission-border': '4px solid #b0e0e6', /* PowderBlue */
+                        '--mission-text-color': '#e0f2f7',
+                        '--mission-h2-color': '#87ceeb',
+                        '--mission-target-icon-color': '#40e0d0', /* Turquoise */
+                        '--mission-target-text-color': '#40e0d0',
+                        '--mission-forbidden-icon-color': '#dc143c', /* Crimson */
+                        '--mission-forbidden-text-color': '#dc143c',
+                        '--mission-level-name-color': '#a9d9e5', /* light blue-gray */
+                        '--button-bg': 'linear-gradient(145deg, #1e90ff, #00bfff)', /* DodgerBlue to DeepSkyBlue */
+                        '--button-color': '#ffffff',
+                        '--button-shadow': '0 4px 15px rgba(30, 144, 255, 0.5), 0 0 20px rgba(0, 191, 255, 0.7)',
+                        '--button-hover-shadow': '0 6px 20px rgba(30, 144, 255, 0.8), 0 0 30px rgba(0, 191, 255, 0.9)',
+                        '--modal-bg': '#003366', /* DarkBlue */
+                        '--modal-border': '1px solid rgba(173, 216, 230, 0.6)',
+                        '--modal-shadow': '0 0 40px rgba(0, 191, 255, 0.5)',
+                        '--modal-h2-color': '#87ceeb',
+                        '--modal-h3-color': '#40e0d0',
+                        '--modal-close-color': '#e0f2f7',
+                        '--modal-hover-close-color': '#ffffff',
+                        '--title-instructions-button-color': '#4682b4',
+                        '--title-instructions-button-hover-color': '#1e90ff',
+                        '--screen-flash-color-capture': 'rgba(255, 255, 255, 0.6)',
+                        '--score-positive-color': '#7fffd4', /* Aquamarine */
+                        '--score-negative-color': '#dc143c', /* Crimson */
+                        '--score-bonus-color': '#ffd700', /* Gold for bonus highlight */
+                        '--particle-positive-color': '#ffffff',
+                        // New theme variables for new game mechanics
+                        '--loading-overlay-bg': '#001f3f',
+                        '--loading-overlay-text-color': '#e0f2f7',
+                        '--spinner-border-color-light': 'rgba(255, 255, 255, 0.3)',
+                        '--spinner-border-color-dark': '#1e90ff',
+                        '--score-breakdown-bg': 'rgba(0, 70, 140, 0.6)',
+                        '--score-breakdown-border': '1px solid rgba(173, 216, 230, 0.3)',
+                        '--score-breakdown-text-color': '#e0f2f7',
+                        '--score-breakdown-label-color': '#b0e0e6',
+                        '--score-breakdown-total-color': '#87ceeb',
+                        '--score-breakdown-divider-color': 'rgba(255, 255, 255, 0.3)',
+                        '--mascot-hover-shadow-color1': '#00bfff',
+                        '--mascot-hover-shadow-color2': '#1e90ff',
+                        '--mascot-hover-shadow-color3': '#4682b4',
+                        '--mascot-hover-shadow-color4': '#0074d9',
+                        '--copyright-text-color': '#a9d9e5',
+                    },
+                    '搖滾黑白': {
+                        '--body-bg': 'linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%)',
+                        '--body-text-color': '#e0e0e0',
+                        '--wrapper-bg': 'rgba(25, 25, 25, 0.9)',
+                        '--wrapper-border': '1px solid rgba(150, 150, 150, 0.3)',
+                        '--wrapper-shadow': '0 10px 40px rgba(0, 0, 0, 0.6), 0 0 20px rgba(100, 100, 100, 0.3)',
+                        '--wrapper-text-color': '#e0e0e0',
+                        '--wrapper-h1-color': '#ffffff',
+                        '--canvas-bg': 'linear-gradient(180deg, #333333 0%, #111111 100%)',
+                        '--canvas-border': '44px solid #808080', /* Gray */
+                        '--canvas-shadow': 'inset 0 0 15px rgba(128, 128, 128, 0.5)',
+                        '--status-item-bg': 'rgba(255, 255, 255, 0.1)',
+                        '--status-item-border': '1px solid rgba(255, 255, 255, 0.2)',
+                        '--status-level-bg': 'rgba(0, 255, 0, 0.1)', /* Green */
+                        '--status-level-border': 'rgba(0, 255, 0, 0.2)',
+                        '--status-timer-bg': 'rgba(255, 0, 0, 0.1)', /* Red */
+                        '--status-timer-border': 'rgba(255, 0, 0, 0.2)',
+                        '--status-score-bg': 'rgba(0, 0, 255, 0.1)', /* Blue */
+                        '--status-score-border': 'rgba(0, 0, 255, 0.2)',
+                        '--status-level-text': '#00ff00',
+                        '--status-timer-text': '#ff0000',
+                        '--status-score-text': '#0000ff',
+                        '--mission-bg': 'rgba(50, 50, 50, 0.7)',
+                        '--mission-border': '4px solid #a0a0a0', /* LightGray */
+                        '--mission-text-color': '#e0e0e0',
+                        '--mission-h2-color': '#ffffff',
+                        '--mission-target-icon-color': '#00ff00',
+                        '--mission-target-text-color': '#00ff00',
+                        '--mission-forbidden-icon-color': '#ff0000',
+                        '--mission-forbidden-text-color': '#ff0000',
+                        '--mission-level-name-color': '#a0a0a0',
+                        '--button-bg': 'linear-gradient(145deg, #666666, #333333)',
+                        '--button-color': '#ffffff',
+                        '--button-shadow': '0 4px 15px rgba(0, 0, 0, 0.4), 0 0 20px rgba(100, 100, 100, 0.6)',
+                        '--button-hover-shadow': '0 6px 20px rgba(0, 0, 0, 0.5), 0 0 30px rgba(100, 100, 100, 0.8)',
+                        '--modal-bg': '#222222',
+                        '--modal-border': '1px solid rgba(150, 150, 150, 0.4)',
+                        '--modal-shadow': '0 0 30px rgba(0, 0, 0, 0.7)',
+                        '--modal-h2-color': '#ffffff',
+                        '--modal-h3-color': '#00ff00',
+                        '--modal-close-color': '#e0e0e0',
+                        '--modal-hover-close-color': '#ffffff',
+                        '--title-instructions-button-color': '#808080',
+                        '--title-instructions-button-hover-color': '#ffffff',
+                        '--screen-flash-color-capture': 'rgba(255, 255, 255, 0.6)',
+                        '--score-positive-color': '#00ff00',
+                        '--score-negative-color': '#ff0000',
+                        '--score-bonus-color': '#ffd700', /* Gold for bonus highlight */
+                        '--particle-positive-color': '#ffffff',
+                        // New theme variables for new game mechanics
+                        '--loading-overlay-bg': '#1a1a1a',
+                        '--loading-overlay-text-color': '#e0e0e0',
+                        '--spinner-border-color-light': 'rgba(255, 255, 255, 0.3)',
+                        '--spinner-border-color-dark': '#ffffff',
+                        '--score-breakdown-bg': 'rgba(50, 50, 50, 0.7)',
+                        '--score-breakdown-border': '1px solid rgba(150, 150, 150, 0.3)',
+                        '--score-breakdown-text-color': '#e0e0e0',
+                        '--score-breakdown-label-color': '#a0a0a0',
+                        '--score-breakdown-total-color': '#ffffff',
+                        '--score-breakdown-divider-color': 'rgba(255, 255, 255, 0.3)',
+                        '--mascot-hover-shadow-color1': '#ffffff',
+                        '--mascot-hover-shadow-color2': '#a0a0a0',
+                        '--mascot-hover-shadow-color3': '#808080',
+                        '--mascot-hover-shadow-color4': '#333333',
+                        '--copyright-text-color': '#a0a0a0',
+                    },
+                }
+            },
+            cache: {},
+            state: {
+                objects: [],
+                levels: [],
+                objectIdCounter: 0,
+                _nextSequentialItemNumberForDisplay: 1, // This tracks the NNN in itemNNN.ext for new objects
+                generatedGameConfig: null, // 儲存生成的最終配置
+                selectedTheme: '現代黑藍' // Default theme
+            },
+
+            init() {
+                this.cacheElements();
+                this.bindEvents();
+                this.initializeGenerator(); // Load initial data and render
+                this.renderThemes(); // Render theme buttons
+                this.makeLevelsSortable();
+                this.initMascot(); // Initialize mascot for the generator page
+            },
+
+            cacheElements() {
+                const D = document;
+                this.cache = {
+                    browserTitleInput: D.getElementById('browserTitleInput'),
+                    gameTitleInput: D.getElementById('gameTitleInput'),
+                    copyrightTextInput: D.getElementById('copyrightTextInput'),
+                    scorePerCaptureInput: D.getElementById('scorePerCapture'),
+                    bonusItemScoreInput: D.getElementById('bonusItemScore'),
+                    scaleFactorInput: D.getElementById('scaleFactor'),
+                    objectConfigList: D.getElementById('object-config-list'),
+                    addObjectBtn: D.getElementById('add-object-btn'),
+                    levelConfigList: D.getElementById('level-config-list'),
+                    addLevelBtn: D.getElementById('add-level-btn'),
+                    generateConfigBtn: D.getElementById('generate-config-btn'),
+                    downloadZipBtn: D.getElementById('download-zip-btn'),
+                    indexTemplateContent: D.getElementById('indexTemplateContent'),
+                    loader: D.getElementById('loader'),
+                    loaderText: D.getElementById('loader-text'),
+                    mascotGenerator: D.getElementById('mascot-generator'), // Cache mascot for generator
+                    themeSelectionButtons: D.getElementById('theme-selection-buttons'),
+                    toastNotification: D.getElementById('toast-notification') // New: Cache toast notification
+                };
+            },
+
+            bindEvents() {
+                // Delegate events for dynamically added/removed elements
+                this.cache.objectConfigList.addEventListener('input', this._handleObjectInput.bind(this));
+                this.cache.objectConfigList.addEventListener('change', this._handleObjectChange.bind(this));
+                this.cache.objectConfigList.addEventListener('click', this._handleObjectClick.bind(this));
+
+                this.cache.levelConfigList.addEventListener('input', this._handleLevelInput.bind(this));
+                this.cache.levelConfigList.addEventListener('change', this._handleLevelChange.bind(this));
+                this.cache.levelConfigList.addEventListener('click', this._handleLevelClick.bind(this));
+
+                // Direct button clicks
+                this.cache.addObjectBtn.addEventListener('click', this.addCaptureObject.bind(this));
+                this.cache.addLevelBtn.addEventListener('click', this.addGameLevel.bind(this));
+                this.cache.generateConfigBtn.addEventListener('click', this.generateGameConfig.bind(this));
+                this.cache.downloadZipBtn.addEventListener('click', this.downloadGameZip.bind(this));
+
+                // Global settings inputs (invalidate config on change)
+                this.cache.browserTitleInput.addEventListener('input', () => this.state.generatedGameConfig = null);
+                this.cache.gameTitleInput.addEventListener('input', () => this.state.generatedGameConfig = null);
+                this.cache.copyrightTextInput.addEventListener('input', () => this.state.generatedGameConfig = null);
+                this.cache.scorePerCaptureInput.addEventListener('input', () => this.state.generatedGameConfig = null);
+                this.cache.bonusItemScoreInput.addEventListener('input', () => this.state.generatedGameConfig = null);
+                this.cache.scaleFactorInput.addEventListener('input', () => this.state.generatedGameConfig = null);
+
+                // Theme selection
+                this.cache.themeSelectionButtons.addEventListener('click', this._handleThemeSelection.bind(this));
+            },
+
+            _handleObjectInput(e) {
+                const target = e.target;
+                const objId = target.dataset.objectId;
+                const obj = this.state.objects.find(o => o.id === objId);
+                if (!obj) return;
+                this.state.generatedGameConfig = null; // Invalidate config on change
+
+                if (target.classList.contains('object-name-input')) {
+                    obj.name = target.value;
+                    const nameDisplay = document.getElementById(`obj-name-display-${objId}`);
+                    if (nameDisplay) nameDisplay.textContent = obj.name;
+                    this.renderLevels(); // 名稱變更可能影響關卡中的選單顯示
+                } else if (target.classList.contains('object-size-input')) {
+                    obj.size = parseFloat(target.value);
+                } else if (target.classList.contains('object-speed-input')) {
+                    obj.speed = parseFloat(target.value);
+                }
+            },
+
+            _handleObjectChange(e) {
+                const target = e.target;
+                const objId = target.dataset.objectId;
+                const obj = this.state.objects.find(o => o.id === objId);
+                if (!obj) return;
+                this.state.generatedGameConfig = null; // Invalidate config on change
+
+                if (target.classList.contains('object-image-input') && target.files.length > 0) {
+                    const file = target.files[0];
+                    obj.imageFile = file; // Store File object
+                    const fileExtension = file.name.split('.').pop().toLowerCase(); // 確保小寫
+
+                    // 更新 displayFilename 的副檔名，itemNNN 部分不變
+                    const baseFilename = obj.displayFilename.split('.')[0];
+                    obj.displayFilename = `${baseFilename}.${fileExtension}`;
+
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        obj.imagePath = reader.result; // Data URL for preview
+                        const imgPreview = document.getElementById(`img-preview-${objId}`);
+                        if (imgPreview) {
+                            imgPreview.src = reader.result;
+                            imgPreview.classList.remove('hidden');
+                        }
+                        this.renderObjects(); // 圖片變更，重新渲染以顯示更新後的「預計打包為」文字和圖片
+                        this.renderLevels(); // 圖片變更可能影響關卡中的選單顯示
+                    };
+                    reader.readAsDataURL(file);
+                } else if (target.classList.contains('object-bonus-checkbox')) {
+                    obj.isBonus = target.checked;
+                }
+            },
+
+            _handleObjectClick(e) {
+                const target = e.target.closest('.delete-object-btn');
+                if (!target) return;
+                const objId = target.dataset.objectId;
+                const deletedObj = this.state.objects.find(obj => obj.id === objId);
+                if (!deletedObj) return;
+                this.state.generatedGameConfig = null; // Invalidate config on change
+
+                const objectKeyToRemove = this._sanitizeId(deletedObj.name);
+                this.state.objects = this.state.objects.filter(obj => obj.id !== objId);
+
+                // 從所有關卡中移除這個物件
+                this.state.levels.forEach(level => {
+                    if (level.required) level.required = level.required.filter(id => id !== objectKeyToRemove);
+                    if (level.forbidden) level.forbidden = level.forbidden.filter(id => id !== objectKeyToRemove);
+                });
+                this.renderObjects(); // This will also trigger renderLevels()
+            },
+
+            _handleLevelInput(e) {
+                const target = e.target;
+                const levelId = target.dataset.levelId;
+                const level = this.state.levels.find(l => l.id === levelId);
+                if (!level) return;
+                this.state.generatedGameConfig = null; // Invalidate config on change
+
+                if (target.classList.contains('level-name-input')) {
+                    level.name = target.value;
+                    const nameDisplay = document.getElementById(`level-name-display-${levelId}`);
+                    if (nameDisplay) nameDisplay.textContent = level.name;
+                } else if (target.classList.contains('level-duration-input')) {
+                    level.duration = parseFloat(target.value);
+                } else if (target.classList.contains('level-object-count-input')) {
+                    level.objectCount = parseFloat(target.value);
+                } else if (target.classList.contains('level-speed-multiplier-input')) {
+                    level.speedMultiplier = parseFloat(target.value);
+                } else if (target.classList.contains('level-bonus-item-chance-input')) { // New input
+                    level.bonusItemChance = parseFloat(target.value);
+                }
+            },
+
+            _handleLevelChange(e) {
+                const target = e.target;
+                if (!target.classList.contains('level-item-checkbox')) return;
+
+                const levelId = target.dataset.levelId;
+                const itemId = target.dataset.itemId; // Already sanitized
+                const itemType = target.dataset.itemType;
+                const level = this.state.levels.find(l => l.id === levelId);
+                if (!level) return;
+                this.state.generatedGameConfig = null; // Invalidate config on change
+
+                // Ensure required and forbidden arrays exist
+                if (!level.required) level.required = [];
+                if (!level.forbidden) level.forbidden = [];
+
+                if (target.checked) {
+                    // Check for conflicts: cannot be both required and forbidden
+                    if (itemType === 'target') {
+                        if (level.forbidden.includes(itemId)) {
+                            alert(`物品 "${this.state.objects.find(o => this._sanitizeId(o.name) === itemId)?.name || itemId}" 已被設為禁忌物品，不能同時設為目標物品。`);
+                            target.checked = false; // Revert checkbox state
+                            return;
+                        }
+                        if (!level.required.includes(itemId)) level.required.push(itemId);
+                    } else if (itemType === 'forbidden') {
+                        if (level.required.includes(itemId)) {
+                            alert(`物品 "${this.state.objects.find(o => this._sanitizeId(o.name) === itemId)?.name || itemId}" 已被設為目標物品，不能同時設為禁忌物品。`);
+                            target.checked = false; // Revert checkbox state
+                            return;
+                        }
+                        if (!level.forbidden.includes(itemId)) level.forbidden.push(itemId);
+                    }
+                } else {
+                    if (itemType === 'target') {
+                        level.required = level.required.filter(id => id !== itemId);
+                    } else if (itemType === 'forbidden') {
+                        level.forbidden = level.forbidden.filter(id => id !== itemId);
+                    }
+                }
+            },
+
+            _handleLevelClick(e) {
+                const target = e.target.closest('.delete-level-btn');
+                if (!target) return;
+                const levelId = target.dataset.levelId;
+                this.state.levels = this.state.levels.filter(level => level.id !== levelId);
+                this.renderLevels();
+                this.state.generatedGameConfig = null; // Invalidate config on new level
+            },
+
+            _handleThemeSelection(e) {
+                const target = e.target.closest('.theme-button');
+                if (!target) return;
+
+                const themeName = target.dataset.themeName;
+                if (this.state.selectedTheme === themeName) return; // Already selected
+
+                this.state.selectedTheme = themeName;
+                this.renderThemes(); // Re-render to update active state
+                this.state.generatedGameConfig = null; // Invalidate config on theme change
+            },
+            
+            // _convertToPinyin 函式已移除
+
+            _sanitizeId(name) {
+                // 將非字母數字或底線的字符替換為底線，並轉換為大寫
+                let sanitized = name.replace(/[^a-zA-Z0-9_]/g, '_').toUpperCase();
+                // 移除開頭/結尾的底線，並合併多個連續的底線
+                sanitized = sanitized.replace(/_+/g, '_').replace(/^_|_$/g, '');
+
+                // 如果經過處理後仍然為空或過短，則使用基於名稱雜湊值的通用鍵作為後備。
+                // 這增強了對純中文字符名稱的支援，因為它們不會被拼音轉換。
+                if (sanitized.trim() === '' || sanitized.length < 3) {
+                     return `ITEM_KEY_${Math.abs(this._stringHash(name)).toString(16).toUpperCase()}`;
+                }
+                return sanitized;
+            },
+
+            // Simple string hashing function
+            _stringHash(s) {
+                let hash = 0;
+                for (let i = 0; i < s.length; i++) {
+                    const char = s.charCodeAt(i);
+                    hash = ((hash << 5) - hash) + char;
+                    hash |= 0; // Convert to 32bit integer
+                }
+                return hash;
+            },
+
+            _createObjectConfigHtml(obj, index) {
+                const objectId = obj.id || `OBJ_${this.state.objectIdCounter++}`;
+                obj.id = objectId; // Ensure object data has ID
+
+                // 如果 obj.imagePath 為空或預設 GIF，則使用一個透明 GIF，否則使用設定的路徑
+                const displayPath = obj.imagePath && obj.imagePath !== 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs='
+                    ? obj.imagePath
+                    : 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
+
+                // displayFilename 已經是我們希望顯示的格式
+                const currentFilePathText = obj.displayFilename ? `<p class="text-xs text-gray-500 mt-1">預計打包為: ${obj.displayFilename}</p>` : '';
+
+                return `
+                    <div class="card" data-object-id="${objectId}">
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="text-lg font-semibold text-gray-800">物品 ${index + 1}: <span id="obj-name-display-${objectId}">${obj.name || ''}</span></h3>
+                            <button class="btn-danger text-sm delete-object-btn" data-object-id="${objectId}"><i class="fas fa-trash"></i> 刪除</button>
+                        </div>
+
+                        <div class="mb-2">
+                            <label class="block text-sm font-medium text-gray-700">物品名稱</label>
+                            <input type="text" class="input-field mt-1 object-name-input" value="${obj.name || ''}" placeholder="例如: 月餅" data-object-id="${objectId}">
+                        </div>
+                        <div class="mb-2">
+                            <label class="block text-sm font-medium text-gray-700">圖片上傳 (建議 PNG/SVG)</label>
+                            <input type="file" accept="image/*" class="mt-1 object-image-input" data-object-id="${objectId}">
+                            <img src="${displayPath}" class="image-preview mt-2 ${obj.imagePath ? '' : 'hidden'}" alt="預覽" id="img-preview-${objectId}" onerror="this.onerror=null;this.src='data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';this.classList.add('hidden');">
+                            ${currentFilePathText}
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 mb-2">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">預設大小 (像素)</label>
+                                <input type="number" class="input-field mt-1 object-size-input" value="${obj.size || 30}" min="1" data-object-id="${objectId}">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">基本速度 (倍數)</label>
+                                <input type="number" class="input-field mt-1 object-speed-input" value="${obj.speed || 1.0}" step="0.1" min="0.1" data-object-id="${objectId}">
+                            </div>
+                        </div>
+                        <div class="flex items-center">
+                            <input type="checkbox" class="object-bonus-checkbox mr-2" ${obj.isBonus ? 'checked' : ''} id="obj-bonus-${objectId}" data-object-id="${objectId}">
+                            <label for="obj-bonus-${objectId}" class="text-sm font-medium text-gray-700">是獎勵物品? (遊戲中只會顯示一個獎勵物品)</label>
+                        </div>
+                    </div>
+                `;
+            },
+
+            _createLevelConfigHtml(level, index) {
+                const levelId = level.id || `LEVEL_${index}`; // Use index as part of ID
+                level.id = levelId;
+
+                // Generate options for target and forbidden items
+                const getObjectOptions = (selectedKeys, itemType) => {
+                    return this.state.objects.map((obj) => {
+                        const objectKey = this._sanitizeId(obj.name);
+                        const isSelected = selectedKeys.includes(objectKey);
+                        // Create unique id for each checkbox, link label
+                        const checkboxId = `level-${levelId}-${itemType}-${objectKey}`;
+                        // Disable checkbox if object name is empty or sanitized to empty string
+                        const isDisabled = (!obj.name.trim() || this._sanitizeId(obj.name).trim() === '') ? 'disabled title="請先為物品命名並確保名稱有效"' : '';
+
+                        // 如果 obj.imagePath 為空或預設 GIF，則使用一個透明 GIF，否則使用設定的路徑
+                        const displayPath = obj.imagePath && obj.imagePath !== 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs='
+                            ? obj.imagePath
+                            : 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
+
+                        return `
+                            <label for="${checkboxId}" class="select-item">
+                                <input type="checkbox" class="level-item-checkbox mr-2"
+                                       id="${checkboxId}"
+                                       data-level-id="${levelId}" data-item-id="${objectKey}"
+                                       data-item-type="${itemType}" ${isSelected ? 'checked' : ''} ${isDisabled}>
+                                <img src="${displayPath}" alt="${obj.name}" class="w-8 h-8 object-contain mr-2" onerror="this.onerror=null;this.src='data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';">
+                                <span class="select-item-name">${obj.name || '未命名物品'}</span>
+                            </label>
+                        `;
+                    }).join('');
+                };
+
+                return `
+                    <div class="card" data-level-id="${levelId}">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center">
+                                <i class="fas fa-grip-vertical drag-handle"></i>
+                                <h3 class="text-lg font-semibold text-gray-800">關卡 ${index + 1}: <span id="level-name-display-${levelId}">${level.name || ''}</span></h3>
+                            </div>
+                            <button class="btn-danger text-sm delete-level-btn" data-level-id="${levelId}"><i class="fas fa-trash"></i> 刪除</button>
+                        </div>
+
+                        <div class="mb-2">
+                            <label class="block text-sm font-medium text-gray-700">關卡名稱</label>
+                            <input type="text" class="input-field mt-1 level-name-input" value="${level.name || ''}" placeholder="例如: 輕鬆入門" data-level-id="${levelId}">
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 mb-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">時間限制 (秒)</label>
+                                <input type="number" class="input-field mt-1 level-duration-input" value="${level.duration || 10}" min="1" data-level-id="${levelId}">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">物件總數 (含目標/禁忌)</label>
+                                <input type="number" class="input-field mt-1 level-object-count-input" value="${level.objectCount || 10}" min="1" data-level-id="${levelId}">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">速度倍數</label>
+                                <input type="number" class="input-field mt-1 level-speed-multiplier-input" value="${level.speedMultiplier || 1.0}" step="0.1" min="0.1" data-level-id="${levelId}">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">獎勵物品出現機率 (0.0 - 1.0)</label>
+                                <input type="number" class="input-field mt-1 level-bonus-item-chance-input" value="${level.bonusItemChance || 0.2}" step="0.05" min="0" max="1" data-level-id="${levelId}">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">目標物品 (Required)</label>
+                                <div class="border border-gray-300 rounded-md bg-white p-2 h-48 overflow-y-auto">
+                                    ${getObjectOptions(level.required || [], 'target')}
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">關卡專屬禁忌物品 (Forbidden)</label>
+                                <div class="border border-gray-300 rounded-md bg-white p-2 h-48 overflow-y-auto">
+                                    ${getObjectOptions(level.forbidden || [], 'forbidden')}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            },
+
+            renderObjects() {
+                this.cache.objectConfigList.innerHTML = this.state.objects.map(this._createObjectConfigHtml.bind(this)).join('');
+                this.renderLevels(); // Items updated, so re-render levels to update selection lists
+            },
+
+            renderLevels() {
+                this.cache.levelConfigList.innerHTML = this.state.levels.map(this._createLevelConfigHtml.bind(this)).join('');
+                this.makeLevelsSortable();
+            },
+
+            renderThemes() {
+                this.cache.themeSelectionButtons.innerHTML = Object.keys(this.CONFIG.THEMES).map(themeName => {
+                    const isActive = this.state.selectedTheme === themeName;
+                    return `<button type="button" class="theme-button ${isActive ? 'active' : ''}" data-theme-name="${themeName}">${themeName}</button>`;
+                }).join('');
+            },
+
+            makeLevelsSortable() {
+                // Destroy existing sortable instance if it exists to prevent re-initialization
+                if (this._sortableInstance) {
+                    this._sortableInstance.destroy();
+                }
+                this._sortableInstance = new Sortable(this.cache.levelConfigList, {
+                    animation: 150,
+                    handle: '.drag-handle',
+                    onEnd: (evt) => {
+                        const oldIndex = evt.oldIndex;
+                        const newIndex = evt.newIndex;
+                        const [movedItem] = this.state.levels.splice(oldIndex, 1);
+                        this.state.levels.splice(newIndex, 0, movedItem);
+                        this.renderLevels(); // Re-render to update displayed level numbers
+                        this.state.generatedGameConfig = null; // Invalidate config on reorder
+                    },
+                });
+            },
+
+            addCaptureObject() {
+                const newIdNumber = String(this.state._nextSequentialItemNumberForDisplay++).padStart(3, '0');
+                const defaultExtension = 'svg'; // Default extension for new items to match existing example
+                this.state.objects.push({
+                    id: `OBJ_${this.state.objectIdCounter++}`,
+                    name: `新物品 ${this.state.objects.length + 1}`,
+                    imageFile: null,        // Store File object (for user uploads)
+                    imagePath: 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=', // Placeholder Data URL for preview
+                    displayFilename: `item${newIdNumber}.${defaultExtension}`, // The file name to be used in ZIP
+                    size: 30,
+                    speed: 1.0,
+                    isBonus: false
+                });
+                this.renderObjects();
+                this.state.generatedGameConfig = null; // Invalidate config on new object
+            },
+
+            addGameLevel() {
+                this.state.levels.push({
+                    id: `LEVEL_${this.state.levels.length}`,
+                    name: `新關卡 ${this.state.levels.length + 1}`,
+                    duration: 10,
+                    objectCount: 10,
+                    speedMultiplier: 1.0,
+                    bonusItemChance: 0.2, // Default bonus item chance
+                    required: [],
+                    forbidden: []
+                });
+                this.renderLevels();
+                this.state.generatedGameConfig = null; // Invalidate config on new level
+            },
+
+            async generateGameConfig() {
+                this.cache.loaderText.textContent = '正在生成遊戲配置，請稍候...';
+                this.cache.loader.style.display = 'flex';
+
+                let hasError = false;
+                const gameConfig = {
+                    GAME_TITLE: this.cache.gameTitleInput.value,
+                    BROWSER_TITLE: this.cache.browserTitleInput.value,
+                    COPYRIGHT_TEXT: this.cache.copyrightTextInput.value,
+                    SCORE_PER_CAPTURE: parseFloat(this.cache.scorePerCaptureInput.value),
+                    BONUS_ITEM_SCORE: parseFloat(this.cache.bonusItemScoreInput.value),
+                    SCALE_FACTOR: parseFloat(this.cache.scaleFactorInput.value),
+                    OBJECT_DEFINITIONS: {},
+                    LEVELS: [],
+                    THEME_STYLES: this.CONFIG.THEMES[this.state.selectedTheme] // Add selected theme styles
+                };
+
+                const usedObjectKeys = new Set();
+                
+                // Process object definitions
+                for (const obj of this.state.objects) {
+                    if (hasError) break;
+
+                    if (!obj.name.trim()) {
+                        alert(`物品必須命名！請檢查物品 ${obj.id}。`);
+                        hasError = true;
+                        break;
+                    }
+                    // Check if imageFile or imagePath (for default SVGs) is missing
+                    if (!obj.imageFile && (!obj.imagePath || obj.imagePath === 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=')) {
+                        alert(`物品 "${obj.name}" 必須上傳圖片或有預設圖片內容！請檢查物品 ${obj.id}。`);
+                        hasError = true;
+                        break;
+                    }
+
+                    const objectKey = this._sanitizeId(obj.name);
+                    if (usedObjectKeys.has(objectKey)) {
+                        alert(`物品名稱 "${obj.name}" (處理後為 "${objectKey}") 重複了，請修改！`);
+                        hasError = true;
+                        break;
+                    }
+                    usedObjectKeys.add(objectKey);
+                    
+                    gameConfig.OBJECT_DEFINITIONS[objectKey] = {
+                        path: `item/${obj.displayFilename}`, // Use the stable displayFilename for the path
+                        size: obj.size * gameConfig.SCALE_FACTOR, // Apply scale factor here
+                        speed: obj.speed,
+                        name: obj.name,
+                        isBonus: obj.isBonus,
+                    };
+                }
+
+                if (hasError) {
+                    this.state.generatedGameConfig = null;
+                    this.cache.downloadZipBtn.disabled = true;
+                    this.cache.loader.style.display = 'none';
+                    return;
+                }
+
+                // GLOBAL_FORBIDDEN_ITEMS removed, no need to populate it.
+
+                // Process level definitions
+                for (const level of this.state.levels) {
+                    if (hasError) break; // Check hasError from previous loop as well
+
+                    if (!level.name.trim()) {
+                        alert(`關卡必須命名！請檢查關卡 ${level.id}。`);
+                        hasError = true;
+                        break;
+                    }
+                    if ((level.required || []).length === 0) {
+                        alert(`關卡 "${level.name}" 必須至少有一個目標物品！`);
+                        hasError = true;
+                        break;
+                    }
+
+                    // Check if required and forbidden items are mutually exclusive
+                    const conflictItems = (level.required || []).filter(id => (level.forbidden || []).includes(id));
+                    if (conflictItems.length > 0) {
+                        const conflictNames = conflictItems.map(id => this.state.objects.find(o => this._sanitizeId(o.name) === id)?.name || id).join(', ');
+                        alert(`關卡 "${level.name}" 中，物品 "${conflictNames}" 既被設為目標物品又被設為禁忌物品。請修正！`);
+                        hasError = true;
+                        break;
+                    }
+
+                    gameConfig.LEVELS.push({
+                        name: level.name,
+                        duration: level.duration,
+                        required: level.required || [],
+                        forbidden: level.forbidden || [],
+                        objectCount: level.objectCount,
+                        speedMultiplier: level.speedMultiplier,
+                        bonusItemChance: level.bonusItemChance || 0.2, // Include bonusItemChance
+                    });
+                }
+
+                if (hasError) {
+                    this.state.generatedGameConfig = null;
+                    this.cache.downloadZipBtn.disabled = true;
+                    this.cache.loader.style.display = 'none';
+                    return;
+                }
+
+                this.state.generatedGameConfig = gameConfig; // Store the generated configuration
+                this.cache.downloadZipBtn.disabled = false; // Enable download button
+                this.showToast('配置生成成功！現在可以下載遊戲 ZIP 包了。', 'success');
+                this.cache.loader.style.display = 'none';
+            },
+
+            async downloadGameZip() {
+                if (!this.state.generatedGameConfig) {
+                    this.showToast('請先生成配置！', 'warning');
+                    return;
+                }
+
+                this.cache.loaderText.textContent = '正在打包遊戲檔案，請稍候...';
+                this.cache.loader.style.display = 'flex';
+
+                console.log("Starting ZIP generation...");
+                const zip = new JSZip();
+                const itemFolder = zip.folder("item");
+
+                // 1. Add image files to item/ folder
+                console.log("Adding object images to ZIP...");
+                const objectDefinitions = this.state.generatedGameConfig.OBJECT_DEFINITIONS;
+
+                // Create a temporary map to find the original object by its new sanitized key
+                const objectMapByKey = new Map(this.state.objects.map(obj => [this._sanitizeId(obj.name), obj]));
+
+                for (const objectKey in objectDefinitions) {
+                    if (!objectDefinitions.hasOwnProperty(objectKey)) continue;
+
+                    const objDef = objectDefinitions[objectKey]; // This objDef has the final path like "item/item001.svg"
+                    const originalObj = objectMapByKey.get(objectKey); // Get the original object from generator state
+
+                    if (!originalObj) {
+                        console.warn(`Original object for key ${objectKey} not found in state.`);
+                        continue;
+                    }
+
+                    const finalFilenameInZip = objDef.path.replace('item/', ''); // e.g., "item001.svg"
+
+                    if (originalObj.imageFile) {
+                        console.log(`Adding uploaded file for ${originalObj.name} as item/${finalFilenameInZip}`);
+                        itemFolder.file(finalFilenameInZip, originalObj.imageFile);
+                    } else if (originalObj.imagePath.startsWith('data:')) {
+                        try {
+                            const base64Data = originalObj.imagePath.split(',')[1];
+                            const mimeType = originalObj.imagePath.split(';')[0].split(':')[1];
+                            const blob = this._base64toBlob(base64Data, mimeType);
+                            itemFolder.file(finalFilenameInZip, blob);
+                            console.log(`Added embedded image for ${originalObj.name} as item/${finalFilenameInZip}`);
+                        } catch (e) {
+                            console.error(`Error adding embedded image for ${originalObj.name}:`, e);
+                            this.showToast(`無法加載內嵌圖片 "${originalObj.name}"。ZIP 生成失敗。`, 'error');
+                            this.cache.loader.style.display = 'none';
+                            return;
+                        }
+                    } else {
+                        // This case handles default SVG files like 'item/egg.svg' from the generator's local assets.
+                        try {
+                            // Fetch from the original relative path (e.g., 'item/egg.svg')
+                            const response = await fetch(originalObj.imagePath); 
+                            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                            const blob = await response.blob();
+                            itemFolder.file(finalFilenameInZip, blob);
+                            console.log(`Added default image for ${originalObj.name} from path ${originalObj.imagePath} as item/${finalFilenameInZip}`);
+                        } catch (e) {
+                            console.error(`Error fetching default image for ${originalObj.name} from ${originalObj.imagePath}:`, e);
+                            this.showToast(`無法加載預設圖片 "${originalObj.name}"。請確認 'item/' 資料夾內有對應的圖片檔案，或嘗試上傳新圖片。ZIP 生成失敗。`, 'error');
+                            this.cache.loader.style.display = 'none';
+                            return;
+                        }
+                    }
+                }
+                console.log("Object images added.");
+
+                // 2. Get and modify index.html template (now read from DOM)
+                console.log("Reading index.html template from DOM...");
+                let indexHtmlContent = this.cache.indexTemplateContent.value;
+                console.log("index.html template content read successfully.");
+
+                // Replace global settings
+                indexHtmlContent = indexHtmlContent.replace(/<!-- INSERT_BROWSER_TITLE_HERE -->/g, this.state.generatedGameConfig.BROWSER_TITLE);
+                indexHtmlContent = indexHtmlContent.replace(/<!-- INSERT_GAME_TITLE_HERE -->/g, this.state.generatedGameConfig.GAME_TITLE);
+                indexHtmlContent = indexHtmlContent.replace(/<!-- INSERT_GENERATED_COPYRIGHT_HTML_HERE -->/g, this.state.generatedGameConfig.COPYRIGHT_TEXT);
+
+                // Insert theme CSS variables
+                let themeCssVariables = ':root {\n';
+                const themeStyles = this.state.generatedGameConfig.THEME_STYLES;
+                for (const prop in themeStyles) {
+                    if (themeStyles.hasOwnProperty(prop)) {
+                        themeCssVariables += `  ${prop}: ${themeStyles[prop]};\n`;
+                    }
+                }
+                themeCssVariables += '}\n';
+                indexHtmlContent = indexHtmlContent.replace('<!-- INSERT_THEME_CSS_VARIABLES_HERE -->', themeCssVariables);
+
+                // Replace JS variables
+                const objectDefsString = JSON.stringify(this.state.generatedGameConfig.OBJECT_DEFINITIONS, null, 4);
+                const levelsString = JSON.stringify(this.state.generatedGameConfig.LEVELS, null, 4);
+                // GLOBAL_FORBIDDEN_ITEMS removed, its placeholder is also removed.
+
+                indexHtmlContent = indexHtmlContent.replace('/* <!-- INSERT_OBJECT_DEFINITIONS_HERE --> */', `const ORIGINAL_IMAGE_DEFINITIONS = ${objectDefsString};`);
+                indexHtmlContent = indexHtmlContent.replace('/* <!-- INSERT_LEVELS_HERE --> */', `const LEVELS = ${levelsString};`);
+                indexHtmlContent = indexHtmlContent.replace('/* <!-- GLOBAL_FORBIDDEN_ITEMS_REMOVED --> */', '');
+
+
+                indexHtmlContent = indexHtmlContent.replace('/* <!-- INSERT_SCORE_PER_CAPTURE_HERE --> */', `const SCORE_PER_CAPTURE = ${this.state.generatedGameConfig.SCORE_PER_CAPTURE};`);
+                indexHtmlContent = indexHtmlContent.replace('/* <!-- INSERT_BONUS_ITEM_SCORE_HERE --> */', `const BONUS_ITEM_SCORE = ${this.state.generatedGameConfig.BONUS_ITEM_SCORE};`);
+                indexHtmlContent = indexHtmlContent.replace('/* <!-- INSERT_SCALE_FACTOR_HERE --> */', `const SCALE_FACTOR = ${this.state.generatedGameConfig.SCALE_FACTOR};`);
+
+                zip.file("index.html", indexHtmlContent);
+                console.log("index.html added to ZIP.");
+
+                // 3. Generate and download ZIP
+                console.log("Generating ZIP file...");
+                try {
+                    const content = await zip.generateAsync({ type: "blob" });
+                    saveAs(content, "game_package.zip");
+                    console.log("ZIP file 'game_package.zip' generated and downloaded successfully.");
+                    this.showToast('遊戲 ZIP 包已成功下載！', 'success');
+                } catch (e) {
+                    console.error("ZIP 生成失敗:", e);
+                    this.showToast("ZIP 生成失敗，請檢查瀏覽器開發者工具的 Console 訊息。", 'error');
+                } finally {
+                    this.cache.loader.style.display = 'none';
+                }
+            },
+
+            // Helper function to convert Base64 to Blob (for embedded SVG data URLs)
+            _base64toBlob(base64, mimeType) {
+                const byteCharacters = atob(base64);
+                const byteNumbers = new Array(byteCharacters.length);
+                for (let i = 0; i < byteCharacters.length; i++) {
+                    byteNumbers[i] = byteCharacters.charCodeAt(i);
+                }
+                const byteArray = new Uint8Array(byteNumbers);
+                return new Blob([byteArray], { type: mimeType });
+            },
+
+            showToast(message, type = 'info') {
+                const toast = this.cache.toastNotification;
+                toast.textContent = message;
+                toast.className = 'hidden'; // Reset classes
+                let bgColor = '#333'; // Default dark gray
+                if (type === 'success') bgColor = '#4CAF50'; // Green
+                else if (type === 'error') bgColor = '#F44336'; // Red
+                else if (type === 'warning') bgColor = '#FFC107'; // Amber
+                toast.style.backgroundColor = bgColor;
+                toast.style.display = 'block'; // Make it visible
+                setTimeout(() => {
+                    toast.classList.add('show');
+                }, 10); // Small delay for transition to work
+
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                    toast.addEventListener('transitionend', function handler() {
+                        toast.style.display = 'none';
+                        toast.removeEventListener('transitionend', handler);
+                    });
+                }, 3000); // Hide after 3 seconds
+            },
+
+            initializeGenerator() {
+                // Pre-fill objectIdCounter to avoid ID conflicts with initial objects
+                this.state.objectIdCounter = 5; // Start from 5 for the 5 initial objects
+                this.state._nextSequentialItemNumberForDisplay = 1; // Reset counter for new objects
+
+                // 預設物品的配置 (從簡化列表)
+                this.state.objects = [
+                    { id: 'OBJ_0', name: '炸蛋', imageFile: null, imagePath: 'item/egg.svg', displayFilename: `item${String(this.state._nextSequentialItemNumberForDisplay++).padStart(3, '0')}.svg`, size: 35, speed: 2.0, isBonus: false },
+                    { id: 'OBJ_1', name: '快樂鯉魚', imageFile: null, imagePath: 'item/gms.svg', displayFilename: `item${String(this.state._nextSequentialItemNumberForDisplay++).padStart(3, '0')}.svg`, size: 27.5, speed: 1.0, isBonus: true },
+                    { id: 'OBJ_2', name: '月亮', imageFile: null, imagePath: 'item/moon.svg', displayFilename: `item${String(this.state._nextSequentialItemNumberForDisplay++).padStart(3, '0')}.svg`, size: 30, speed: 0.5, isBonus: false },
+                    { id: 'OBJ_3', name: '玉兔', imageFile: null, imagePath: 'item/rabbit.svg', displayFilename: `item${String(this.state._nextSequentialItemNumberForDisplay++).padStart(3, '0')}.svg`, size: 20, speed: 1.0, isBonus: false },
+                    { id: 'OBJ_4', name: '老虎', imageFile: null, imagePath: 'item/tiger.svg', displayFilename: `item${String(this.state._nextSequentialItemNumberForDisplay++).padStart(3, '0')}.svg`, size: 25, speed: 2.5, isBonus: false },
+                ];
+                
+
+                // 預設關卡列表 (簡化為三關)
+                this.state.levels = [
+                    { id: 'LEVEL_0', name: '入門捕手', duration: 15, objectCount: 8, speedMultiplier: 1.0, bonusItemChance: 0.2, required: [this._sanitizeId('月亮')], forbidden: [this._sanitizeId('炸蛋')] },
+                    { id: 'LEVEL_1', name: '雙重挑戰', duration: 12, objectCount: 12, speedMultiplier: 1.3, bonusItemChance: 0.3, required: [this._sanitizeId('月亮'), this._sanitizeId('玉兔')], forbidden: [this._sanitizeId('炸蛋'), this._sanitizeId('老虎')] },
+                    { id: 'LEVEL_2', name: '終極追逐', duration: 10, objectCount: 15, speedMultiplier: 1.6, bonusItemChance: 0.4, required: [this._sanitizeId('月亮'), this._sanitizeId('玉兔')], forbidden: [this._sanitizeId('炸蛋'), this._sanitizeId('老虎')] }
+                ];
+
+                this.renderObjects();
+                // renderLevels is called by renderObjects, so no need to call it directly here.
+            },
+
+            initMascot() {
+                let clickCount = 0;
+                // Only initialize if the mascot element exists on the generator page
+                if (this.cache.mascotGenerator) {
+                    this.cache.mascotGenerator.addEventListener("click", (e) => {
+                        this.cache.mascotGenerator.classList.add("shake");
+                        setTimeout(() => this.cache.mascotGenerator.classList.remove("shake"), 500);
+
+                        // Particle effect
+                        const rect = this.cache.mascotGenerator.getBoundingClientRect();
+                        const centerX = rect.left + rect.width / 2;
+                        const centerY = rect.top + rect.height / 2;
+
+                        for (let i = 0; i < 12; i++) {
+                            const p = document.createElement("div");
+                            p.className = "particle";
+                            p.style.backgroundColor = ["#FFC0CB", "#FFDAB9", "#FFA500", "#FF6B00", "#E63946"][Math.floor(5 * Math.random())]; // Using generator theme colors
+                            p.style.left = centerX + "px";
+                            p.style.top = centerY + "px";
+                            const dx = 100 * (Math.random() - 0.5);
+                            const dy = 100 * (Math.random() - 0.5);
+                            p.style.setProperty('--dx', dx + "px");
+                            p.style.setProperty('--dy', dy + "px");
+                            document.body.appendChild(p);
+                            setTimeout(() => p.remove(), 1000);
+                        }
+
+                        // Optional: special interaction after multiple clicks
+                        clickCount++;
+                        if (clickCount >= 5) {
+                            this.showToast('LiyuChillGuy說：別再點我啦！專心設定遊戲喔！', 'info');
+                            clickCount = 0; // Reset
+                        }
+                    });
+                }
+            }
+        };
+
+        // Initialize the App when the DOM is fully loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            App.init();
+        });
+    </script>
+</body>
+</html>

@@ -343,7 +343,7 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
         
         /* Theme CSS Variables will be inserted here */
-        <!-- INSERT_THEME_CSS_VARIABLES_HERE -->
+        /* <!-- INSERT_THEME_CSS_VARIABLES_HERE --> */
 
         body {
             font-family: 'Inter', sans-serif;
@@ -765,18 +765,18 @@
 
     <script>
         // --- 遊戲全局配置 ---
-        /* <!-- INSERT_SCALE_FACTOR_HERE --> */
-        /* <!-- INSERT_SCORE_PER_CAPTURE_HERE --> */
-        /* <!-- INSERT_BONUS_ITEM_SCORE_HERE --> */
+        // <!-- INSERT_SCALE_FACTOR_HERE -->
+        // <!-- INSERT_SCORE_PER_CAPTURE_HERE -->
+        // <!-- INSERT_BONUS_ITEM_SCORE_HERE -->
         const TIME_BONUS_MULTIPLIER = 50; // 每秒剩餘時間的分數
         const TARGET_BONUS_PER_ITEM = 50; // 每捕捉一個目標的額外分數 (如果有多個目標)
 
-        /* <!-- INSERT_OBJECT_DEFINITIONS_HERE --> */
+        // <!-- INSERT_OBJECT_DEFINITIONS_HERE -->
         const OBJECT_TYPES = {}; 
 
-        /* <!-- GLOBAL_FORBIDDEN_ITEMS_REMOVED --> */
+        /* GLOBAL_FORBIDDEN_ITEMS_REMOVED */
 
-        /* <!-- INSERT_LEVELS_HERE --> */
+        // <!-- INSERT_LEVELS_HERE -->
 
         // Helper to get CSS variable value
         function getCssVariable(variableName) {
@@ -799,42 +799,42 @@
                 this.x = Math.random() * canvasWidth;
                 this.y = Math.random() < 0.5 ? -this.size : canvasHeight + this.size; 
                 this.baseSpeed = typeDef.speed;
-                this.vx = (Math.random() - 0.5) * 0.5; // 隨機水平速度
+                this.vx = (Math.random() - 0.5) * 1.5; // 隨機水平速度 - 平衡範圍
                 this.vy = this.y < canvasHeight / 2 ? 1 : -1; // 根據出現位置決定初始垂直方向
                 this.isBonus = typeDef.isBonus || false; 
                 this.name = typeDef.name; 
-                this.canvasWidth = canvasWidth;
-                this.canvasHeight = canvasHeight;
             }
 
             isVisibleOnCanvas() {
-                // 判斷物件是否至少部分在畫布內
+                // 判斷物件是否至少部分在畫布內，增加 5px 的邊緣緩衝以提高容錯率
+                const padding = 5;
                 return (
-                    this.x + this.size / 2 > 0 && 
-                    this.x - this.size / 2 < this.canvasWidth && 
-                    this.y + this.size / 2 > 0 && 
-                    this.y - this.size / 2 < this.canvasHeight
+                    this.x + this.size / 2 > padding && 
+                    this.x - this.size / 2 < gameInstance.canvasWidth - padding && 
+                    this.y + this.size / 2 > padding && 
+                    this.y - this.size / 2 < gameInstance.canvasHeight - padding
                 );
             }
 
-            update(speedMultiplier) {
+            update(speedMultiplier, deltaTime) {
                 if (gameInstance.objectsAreFrozen) return; 
 
-                this.x += this.vx * this.baseSpeed * speedMultiplier;
-                this.y += this.vy * this.baseSpeed * speedMultiplier;
+                // 使用 deltaTime (normalize to 60fps) 進行移動更新，使不同刷新率螢幕速度一致
+                const normalDt = deltaTime * 60;
+                this.x += this.vx * this.baseSpeed * speedMultiplier * normalDt;
+                this.y += this.vy * this.baseSpeed * speedMultiplier * normalDt;
 
                 // 邊界反彈
-                if (this.x - this.size / 2 < 0 || this.x + this.size / 2 > this.canvasWidth) {
+                if (this.x - this.size / 2 < 0 || this.x + this.size / 2 > gameInstance.canvasWidth) {
                     this.vx *= -1;
-                    // Prevent sticking to edges
                     if (this.x - this.size / 2 < 0) this.x = this.size / 2;
-                    if (this.x + this.size / 2 > this.canvasWidth) this.x = this.canvasWidth - this.size / 2;
+                    if (this.x + this.size / 2 > gameInstance.canvasWidth) this.x = gameInstance.canvasWidth - this.size / 2;
                 }
             }
 
             isOffScreen() {
                 // 判斷物件是否完全離開畫面
-                return (this.y < -this.size * 2 || this.y > this.canvasHeight + this.size * 2);
+                return (this.y < -this.size * 2 || this.y > gameInstance.canvasHeight + this.size * 2);
             }
 
             draw() {
@@ -1096,7 +1096,7 @@
                 this.gameMessage.textContent = `關卡 ${this.currentLevelIndex + 1}: ${LEVELS[this.currentLevelIndex].name} - 倒數繼續!`; 
                 this.highlightEffect = null; // Clear highlight when resuming game
                 this.scoreBreakdownElement.classList.add('hidden'); // Hide breakdown
-                this.gameStartTime = performance.now() - (LEVELS[this.currentLevelIndex].duration - this.timeLeft) * 1000; // Adjust start time to resume countdown
+                this.lastFrameTime = performance.now(); // Reset last frame time to avoid jump
             }
 
             initLevel(levelIndex) {
@@ -1163,7 +1163,7 @@
                 this.gameState = 'playing';
                 this.objectsAreFrozen = false; 
                 this.highlightEffect = null; 
-                this.gameStartTime = performance.now(); // Reset timer
+                this.lastFrameTime = performance.now(); 
             }
 
             // Dynamically update the mission display area
@@ -1258,7 +1258,6 @@
                 }
                 
                 this.objectsAreFrozen = true; 
-                console.log("Captured. Setting highlightEffect:", highlightType, itemsCaughtInSnapshot); // Debug log
 
                 if (isCurrentSnapshotSuccessful || failureReason !== null) {
                     // Score calculation and level end logic
@@ -1406,10 +1405,9 @@
                 this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
             }
 
-            updateGameTime(currentTime) {
+            updateGameTime(deltaTime) {
                 if (this.gameState === 'playing' && !this.objectsAreFrozen) {
-                    const elapsed = (currentTime - this.gameStartTime) / 1000;
-                    this.timeLeft = LEVELS[this.currentLevelIndex].duration - elapsed;
+                    this.timeLeft -= deltaTime;
                     
                     if (this.timeLeft <= 0) {
                         this.timeLeft = 0;
@@ -1423,11 +1421,11 @@
 
             drawGame(currentTime) {
                 if (!this.lastFrameTime) this.lastFrameTime = currentTime;
-                // const deltaTime = currentTime - this.lastFrameTime; // Delta time for framerate independent updates, currently not used for object movement
+                const deltaTime = (currentTime - this.lastFrameTime) / 1000;
                 this.lastFrameTime = currentTime;
 
                 this.clearScreen();
-                this.updateGameTime(currentTime); // Update time based on current frame
+                this.updateGameTime(deltaTime); 
 
                 const level = LEVELS[this.currentLevelIndex];
                 const speedMultiplier = level ? level.speedMultiplier : 1.0;
@@ -1435,7 +1433,7 @@
                 // Update and draw objects
                 for (let i = this.gameObjects.length - 1; i >= 0; i--) {
                     const obj = this.gameObjects[i];
-                    obj.update(speedMultiplier); 
+                    obj.update(speedMultiplier, deltaTime); 
                     obj.draw();
                     
                     if (!this.objectsAreFrozen && obj.isOffScreen()) { 
@@ -1472,7 +1470,7 @@
                         const alpha = 1 - (elapsed / duration);
                         this.ctx.save();
                         this.ctx.font = 'bold 24px Inter';
-                        this.ctx.fillStyle = msg.color; // Already resolved in displayBonusMessage
+                        this.ctx.fillStyle = msg.color; 
                         this.ctx.textAlign = 'center';
                         this.ctx.textBaseline = 'bottom';
                         this.ctx.globalAlpha = alpha;
@@ -1483,20 +1481,26 @@
                     }
                 }
 
-                // Highlight effect
+                // Highlight effect with subtle pulse
                 if (this.highlightEffect && this.highlightEffect.items.length > 0) {
-                    console.log("Drawing highlight effect:", this.highlightEffect.type, this.highlightEffect.items.length, "items."); // Debug log
+                    const elapsed = currentTime - this.highlightEffect.startTime;
+                    const pulse = 1 + 0.1 * Math.sin(elapsed / 150); // Subtle pulse animation
+                    
                     this.ctx.save();
                     this.ctx.globalAlpha = 1.0; 
-                    this.ctx.lineWidth = 4;
+                    this.ctx.lineWidth = 6;
 
                     for (const item of this.highlightEffect.items) {
                         if (item.obj.isVisibleOnCanvas()) { 
-                            const strokeColor = getCssVariable(item.color); // Resolve CSS variable here
-                            console.log(`  Highlighting ${item.obj.name} with color ${strokeColor}`); // More debug
+                            const strokeColor = getCssVariable(item.color); 
                             this.ctx.strokeStyle = strokeColor; 
                             this.ctx.beginPath();
-                            this.ctx.arc(item.obj.x, item.obj.y, item.obj.size / 2 + 10, 0, Math.PI * 2); 
+                            this.ctx.arc(item.obj.x, item.obj.y, (item.obj.size / 2 + 10) * pulse, 0, Math.PI * 2); 
+                            this.ctx.stroke();
+                            
+                            // Add a subtle glow
+                            this.ctx.shadowBlur = 10;
+                            this.ctx.shadowColor = strokeColor;
                             this.ctx.stroke();
                         }
                     }
@@ -2810,21 +2814,21 @@
                     }
                 }
                 themeCssVariables += '}\n';
-                indexHtmlContent = indexHtmlContent.replace('<!-- INSERT_THEME_CSS_VARIABLES_HERE -->', themeCssVariables);
+                indexHtmlContent = indexHtmlContent.replace('/* <!-- INSERT_THEME_CSS_VARIABLES_HERE --> */', themeCssVariables);
 
                 // Replace JS variables
                 const objectDefsString = JSON.stringify(this.state.generatedGameConfig.OBJECT_DEFINITIONS, null, 4);
                 const levelsString = JSON.stringify(this.state.generatedGameConfig.LEVELS, null, 4);
                 // GLOBAL_FORBIDDEN_ITEMS removed, its placeholder is also removed.
 
-                indexHtmlContent = indexHtmlContent.replace('/* <!-- INSERT_OBJECT_DEFINITIONS_HERE --> */', `const ORIGINAL_IMAGE_DEFINITIONS = ${objectDefsString};`);
-                indexHtmlContent = indexHtmlContent.replace('/* <!-- INSERT_LEVELS_HERE --> */', `const LEVELS = ${levelsString};`);
-                indexHtmlContent = indexHtmlContent.replace('/* <!-- GLOBAL_FORBIDDEN_ITEMS_REMOVED --> */', '');
+                indexHtmlContent = indexHtmlContent.replace('// <!-- INSERT_OBJECT_DEFINITIONS_HERE -->', `const ORIGINAL_IMAGE_DEFINITIONS = ${objectDefsString};`);
+                indexHtmlContent = indexHtmlContent.replace('// <!-- INSERT_LEVELS_HERE -->', `const LEVELS = ${levelsString};`);
+                indexHtmlContent = indexHtmlContent.replace('/* GLOBAL_FORBIDDEN_ITEMS_REMOVED */', '');
 
 
-                indexHtmlContent = indexHtmlContent.replace('/* <!-- INSERT_SCORE_PER_CAPTURE_HERE --> */', `const SCORE_PER_CAPTURE = ${this.state.generatedGameConfig.SCORE_PER_CAPTURE};`);
-                indexHtmlContent = indexHtmlContent.replace('/* <!-- INSERT_BONUS_ITEM_SCORE_HERE --> */', `const BONUS_ITEM_SCORE = ${this.state.generatedGameConfig.BONUS_ITEM_SCORE};`);
-                indexHtmlContent = indexHtmlContent.replace('/* <!-- INSERT_SCALE_FACTOR_HERE --> */', `const SCALE_FACTOR = ${this.state.generatedGameConfig.SCALE_FACTOR};`);
+                indexHtmlContent = indexHtmlContent.replace('// <!-- INSERT_SCORE_PER_CAPTURE_HERE -->', `const SCORE_PER_CAPTURE = ${this.state.generatedGameConfig.SCORE_PER_CAPTURE};`);
+                indexHtmlContent = indexHtmlContent.replace('// <!-- INSERT_BONUS_ITEM_SCORE_HERE -->', `const BONUS_ITEM_SCORE = ${this.state.generatedGameConfig.BONUS_ITEM_SCORE};`);
+                indexHtmlContent = indexHtmlContent.replace('// <!-- INSERT_SCALE_FACTOR_HERE -->', `const SCALE_FACTOR = ${this.state.generatedGameConfig.SCALE_FACTOR};`);
 
                 zip.file("index.html", indexHtmlContent);
                 console.log("index.html added to ZIP.");
